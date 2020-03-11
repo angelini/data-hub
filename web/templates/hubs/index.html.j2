@@ -1,0 +1,31 @@
+{% extends 'base.html.j2' %}
+
+{% block menu %}{% endblock %}
+
+{% block header %}
+  <h1>Hub List</h1>
+{% endblock %}
+
+{% block content %}
+  <a class="pure-button pure-button-primary" href="{{ url_for('hubs.hub_new_html') }}">Add Hub</a>
+  <table class="pure-table pure-table-horizontal">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Hive Host</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for hub in hubs %}
+        <tr>
+          <td>
+            <a href="{{ url_for('datasets.datasets_index_html', hub_id=hub.id) }}">{{ hub.name }}</a>
+          </td>
+          <td>{{ hub.hive_host }}</td>
+          <td>{{ hub.created_at | datetime }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

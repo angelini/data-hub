@@ -1,0 +1,28 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <title>Data-Hub</title>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
+  </head>
+  <body>
+    <header>
+      <div class="pure-menu pure-menu-horizontal">
+        <a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-heading pure-menu-link">DATA HUB</a>
+        <ul class="pure-menu-list">
+          {% block menu %}{% endblock %}
+        </ul>
+      </div>
+      {% block header %}{% endblock %}
+    </header>
+    <section>
+      {% block content %}{% endblock %}
+    </section>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

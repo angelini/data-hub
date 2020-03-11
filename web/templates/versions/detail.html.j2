@@ -1,0 +1,94 @@
+{% extends 'base.html.j2' %}
+
+{% block menu %}
+  <li class="pure-menu-item"><a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-link">Hubs</a></li>
+  <li class="pure-menu-item"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
+  <li class="pure-menu-item"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}" class="pure-menu-link">Versions</a></li>
+{% endblock %}
+
+{% block header %}
+  <h1>Version Detail</h1>
+{% endblock %}
+
+{% block content %}
+  <table class="pure-table pure-table-horizontal">
+    <tbody>
+      <tr>
+        <td>Version</td>
+        <td>{{ version.version }}</td>
+      </tr>
+      <tr>
+        <td>Backend</td>
+        <td>{{ version.module }}</td>
+      </tr>
+      <tr>
+        <td>Path</td>
+        <td>{{ version.path }}</td>
+      </tr>
+      <tr>
+        <td>Description</td>
+        <td>{{ version.description }}</td>
+      </tr>
+      <tr>
+        <td>Created At</td>
+        <td>{{ version.created_at | datetime}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Columns</h2>
+  <table class="pure-table pure-table-horizontal">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type Name</th>
+        <th>Description</th>
+        <th>Nullable</th>
+        <th>Unique</th>
+        <th>Contains PII</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for column in columns %}
+        <tr>
+          <td>{{ column.name }}</td>
+          <td>{{ column.type_name }}</td>
+          <td>{{ column.description }}</td>
+          <td>{{ column.is_nullable }}</td>
+          <td>{{ column.is_unique }}</td>
+          <td>{{ column.has_pii }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Partitions</h2>
+  <table class="pure-table pure-table-horizontal">
+    <thead>
+      <tr>
+        {% for key in version.keys %}
+          <th>{{ key }}</th>
+        {% endfor %}
+        <th>Path</th>
+        <th>Row Count</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for partition in partitions %}
+        <tr>
+          {% for value in partition.vals %}
+            <td>{{ value }}</td>
+          {% endfor %}
+          <td>{{ partition.path }}</td>
+          <td>{{ partition.row_count }}</td>
+          <td>{{ partition.start_time }}</td>
+          <td>{{ partition.end_time }}</td>
+          <td>{{ partition.created_at | datetime }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
