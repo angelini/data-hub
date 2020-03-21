@@ -1,26 +1,28 @@
 {% extends 'base.html.j2' %}
 
-{% block menu %}{% endblock %}
+{% block menu %}
+  <li><a class="uk-parent" href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
+{% endblock %}
 
 {% block header %}
-  <h1>New Hub</h1>
+  New Hub
 {% endblock %}
 
 {% block content %}
-  <form action="{{ url_for('hubs.hub_new_html') }}" method="post" class="pure-form pure-form-aligned">
-    <fieldset>
-      <div class="pure-control-group">
-        <label for="name">Name</label>
-        <input id="name" name="name" type="text" placeholder="Hub Name">
+  <form class="uk-form-stacked" action="{{ url_for('hubs.hub_new_html') }}" method="post">
+    <fieldset class="uk-fieldset">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="name">Name</label>
+        <input id="name" class="uk-input" name="name" type="text" placeholder="Hub Name">
       </div>
 
-      <div class="pure-control-group">
-        <label for="hive-host">Hive Host</label>
-        <input id="hive-host" name="hive_host" type="text" placeholder="hive://local">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="hive-host">Hive Host</label>
+        <input id="hive-host" class="uk-input" name="hive_host" type="text" placeholder="hive://local">
       </div>
 
-      <div class="pure-controls">
-        <button type="submit" class="pure-button pure-button-primary">Add Hub</button>
+      <div class="uk-margin">
+        <button type="submit" class="uk-button uk-button-primary">Add Hub</button>
       </div>
     </fieldset>
   </form>

@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS dataset_versions (
     version     int,
 
     backend_id     int       NOT NULL,
-    keys           text[]    NOT NULL,
+    partition_keys text[]    NOT NULL,
     path           text      NOT NULL,
     description    text      NOT NULL,
     is_overlapping boolean   NOT NULL,
@@ -125,19 +125,19 @@ CREATE TABLE IF NOT EXISTS partitions (
     version           int,
     id                uuid,
 
-    vals       text[],
-    path       text      NOT NULL,
-    row_count  int,
-    start_time timestamp WITH time zone,
-    end_time   timestamp WITH time zone,
-    created_at timestamp WITH time zone NOT NULL,
-    deleted_at timestamp WITH time zone,
+    partition_values text[],
+    path             text      NOT NULL,
+    row_count        int,
+    start_time       timestamp WITH time zone,
+    end_time         timestamp WITH time zone,
+    created_at       timestamp WITH time zone NOT NULL,
+    deleted_at       timestamp WITH time zone,
 
     PRIMARY KEY (hub_id, dataset_id, version, id),
     FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version)
 );
 
-CREATE INDEX partitions_values_idx ON partitions USING gin(vals);
+CREATE INDEX partitions_values_idx ON partitions USING gin(partition_values);
 
 CREATE TABLE IF NOT EXISTS users (
     id    uuid,
@@ -249,7 +249,7 @@ CREATE OR REPLACE VIEW versions_with_backend AS
         ver.hub_id,
         ver.dataset_id,
         ver.version,
-        ver.keys,
+        ver.partition_keys,
         bac.module,
         ver.path,
         ver.description,

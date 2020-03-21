@@ -8,21 +8,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.1/build/pure-min.css" integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='uikit/uikit.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='datatables/dataTables.uikit.css') }}">
+
+    <script src="{{ url_for('static', filename='uikit/uikit.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='uikit/uikit-icons.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='datatables/jquery.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='datatables/jquery.dataTables.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='datatables/dataTables.uikit.js') }}" defer></script>
   </head>
   <body>
     <header>
-      <div class="pure-menu pure-menu-horizontal">
-        <a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-heading pure-menu-link">DATA HUB</a>
-        <ul class="pure-menu-list">
-          {% block menu %}{% endblock %}
-        </ul>
-      </div>
-      {% block header %}{% endblock %}
+      <nav class="uk-navbar-container">
+        <div class="uk-navbar-left">
+          <ul class="uk-navbar-nav">
+            {% block menu %}{% endblock %}
+          </ul>
+        </div>
+      </nav>
+      <h1 class="uk-heading-small uk-heading-divider"><span>{% block header %}{% endblock %}</span></h1>
     </header>
     <section>
       {% block content %}{% endblock %}
     </section>
     {% block scripts %}{% endblock %}
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+          $('.data-table').DataTable({
+              'lengthChange': false,
+          });
+      });
+    </script>
   </body>
 </html>

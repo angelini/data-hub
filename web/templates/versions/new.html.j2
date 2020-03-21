@@ -1,48 +1,57 @@
 {% extends 'base.html.j2' %}
 
 {% block menu %}
-  <li class="pure-menu-item"><a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-link">Hubs</a></li>
-  <li class="pure-menu-item"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
+  <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
+  <li class="uk-parent"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}">Datasets</a></li>
+  <li class="uk-parent"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}">Versions</a></li>
 {% endblock %}
 
 {% block header %}
-  <h1>New Version</h1>
+  New Version
 {% endblock %}
 
 {% block content %}
-  <form id="new-version" action="{{ url_for('versions.version_new_html', hub_id=hub_id, dataset_id=dataset_id) }}" method="post" class="pure-form pure-form-aligned">
-    <fieldset>
-      <div class="pure-control-group">
-        <label for="backend">Backend Name</label>
-        <select id="backend" name="backend">
-          {% for backend in backends %}
-            <option value="{{ backend.module }}">{{ backend.module }}</option>
-          {% endfor %}
-        </select>
+  <form id="new-version" class="uk-form-horizontal" action="{{ url_for('versions.version_new_html', hub_id=hub_id, dataset_id=dataset_id) }}" method="post">
+    <fieldset class="uk-fieldset">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="backend">Backend Name</label>
+        <div class="uk-form-controls">
+          <select id="backend" class="uk-select" name="backend">
+            {% for backend in backends %}
+              <option value="{{ backend.module }}">{{ backend.module }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
 
-      <div class="pure-control-group">
-        <label for="path">Path</label>
-        <input id="path" name="path" type="text" placeholder="/example">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="path">Path</label>
+        <div class="uk-form-controls">
+          <input id="path" class="uk-input" name="path" type="text" placeholder="/example">
+        </div>
       </div>
 
-      <div class="pure-control-group">
-        <label for="description">Description</label>
-        <input id="description" name="description" type="text" placeholder="">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="description">Description</label>
+        <div class="uk-form-controls">
+          <input id="description" class="uk-input" name="description" type="text" placeholder="">
+        </div>
       </div>
 
-      <div class="pure-control-group">
-        <label for="is_overlapping">Has Overlapping Partitions</label>
-        <input id="is_overlapping" name="is_overlapping" type="checkbox">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="is_overlapping">Has Overlapping Partitions</label>
+        <div class="uk-form-controls">
+          <input id="is_overlapping" class="uk-checkbox" name="is_overlapping" type="checkbox">
+        </div>
       </div>
     </fieldset>
   </form>
 
-  <form class="pure-form">
-    <fieldset class="dynamic-rows">
+  <form>
+    <fieldset class="dynamic-rows uk-fieldset">
       <h2>Columns</h2>
-      <button class="add-row pure-button pure-button-active">Add Column</button>
-      <table class="pure-table">
+      <button class="add-row uk-button">Add Column</button>
+      <table class="uk-table uk-table-hover">
         <thead>
           <tr>
             <th>Name</th>
@@ -55,39 +64,39 @@
         </thead>
         <tbody>
           <tr>
-            <td><input name="column_name[]" type="text" placeholder="Name" form="new-version"></td>
+            <td><input class="uk-input" name="column_name[]" type="text" placeholder="Name" form="new-version"></td>
             <td>
-              <select name="column_type[]" form="new-version">
+              <select class="uk-select" name="column_type[]" form="new-version">
                 {% for type_entry in types %}
                   <option value="{{ type_entry.name }}">{{ type_entry.name }}</option>
                 {% endfor %}
               </select>
             </td>
-            <td><input name="column_description[]" type="text" placeholder="Description" form="new-version"></td>
+            <td><input class="uk-input" name="column_description[]" type="text" placeholder="Description" form="new-version"></td>
             <td>
-              <input type="checkbox">
+              <input class="uk-checkbox" type="checkbox">
               <input hidden checked name="column_is_nullable[]" type="text" value="false" form="new-version">
             </td>
             <td>
-              <input type="checkbox">
+              <input class="uk-checkbox" type="checkbox">
               <input hidden checked name="column_is_unique[]" type="text" value="false" form="new-version">
             </td>
             <td>
-              <input type="checkbox">
+              <input class="uk-checkbox" type="checkbox">
               <input hidden checked name="column_has_pii[]" type="text" value="false" form="new-version">
             </td>
-            <td><button class="remove-row pure-button pure-button-active">Remove</button></td>
+            <td><button class="remove-row uk-button">Remove</button></td>
           </tr>
         </tbody>
       </table>
     </fieldset>
   </form>
 
-  <form class="pure-form">
-    <fieldset class="dynamic-rows">
+  <form class="uk-form-stacked">
+    <fieldset class="dynamic-rows uk-fieldset">
       <h2>Partition Keys</h2>
-      <button class="add-row pure-button pure-button-active">Add Partition Key</button>
-      <table class="pure-table">
+      <button class="add-row uk-button">Add Partition Key</button>
+      <table class="uk-table uk-table-hover">
         <thead>
           <tr>
             <th>Key</th>
@@ -95,18 +104,18 @@
         </thead>
         <tbody>
           <tr>
-            <td><input name="partition_name[]" type="text" placeholder="Key" form="new-version"></td>
-            <td><button class="remove-row pure-button pure-button-active">Remove</button></td>
+            <td><input class="uk-input" name="partition_name[]" type="text" placeholder="Key" form="new-version"></td>
+            <td><button class="remove-row uk-button">Remove</button></td>
           </tr>
         </tbody>
       </table>
     </fieldset>
   </form>
 
-  <form class="pure-form pure-form-aligned">
+  <form class="uk-form-stacked">
     <fieldset>
-      <div class="pure-controls">
-        <button type="submit" class="pure-button pure-button-primary" form="new-version">Add Version</button>
+      <div class="uk-margin">
+        <button type="submit" class="uk-button uk-button-primary" form="new-version">Add Version</button>
       </div>
     </fieldset>
   </form>

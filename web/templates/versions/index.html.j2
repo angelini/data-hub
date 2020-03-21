@@ -1,18 +1,19 @@
 {% extends 'base.html.j2' %}
 
 {% block menu %}
-  <li class="pure-menu-item"><a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-link">Hubs</a></li>
-  <li class="pure-menu-item"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
+  <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
+  <li class="uk-parent"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}">Datasets</a></li>
+  <li class="uk-active"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}">Versions</a></li>
 {% endblock %}
 
 {% block header %}
-  <h1>Version List</h1>
+  Version List
 {% endblock %}
 
 
 {% block content %}
-  <a class="pure-button pure-button-primary" href="{{ url_for('versions.version_new_html', hub_id=hub_id, dataset_id=dataset_id) }}">Add Version</a>
-  <table class="pure-table pure-table-horizontal">
+  <a class="uk-button uk-button-primary" href="{{ url_for('versions.version_new_html', hub_id=hub_id, dataset_id=dataset_id) }}">Add Version</a>
+  <table class="data-table uk-table uk-table-hover">
     <thead>
       <tr>
         <th>Version</th>
