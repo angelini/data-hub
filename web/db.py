@@ -5,7 +5,7 @@ psql.extras.register_uuid()
 
 
 def read_view(view):
-    conn = psql.connect('dbname=dh user=postgres')
+    conn = psql.connect('dbname=dh user=postgres host=localhost')
     try:
         cursor = conn.cursor()
         return view.fetch(cursor)
@@ -14,7 +14,7 @@ def read_view(view):
 
 
 def write_action(action):
-    conn = psql.connect('dbname=dh user=postgres')
+    conn = psql.connect('dbname=dh user=postgres host=localhost')
     try:
         cursor = conn.cursor()
         result = action.execute(cursor)

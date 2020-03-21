@@ -1,17 +1,17 @@
 {% extends 'base.html.j2' %}
 
 {% block menu %}
-  <li class="pure-menu-item"><a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-link">Hubs</a></li>
-  <li class="pure-menu-item"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
-  <li class="pure-menu-item"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}" class="pure-menu-link">Versions</a></li>
+  <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-link">Hubs</a></li>
+  <li class="uk-parent"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
+  <li class="uk-active"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}" class="pure-menu-link">Versions</a></li>
 {% endblock %}
 
 {% block header %}
-  <h1>Version Detail</h1>
+  Version Detail
 {% endblock %}
 
 {% block content %}
-  <table class="pure-table pure-table-horizontal">
+  <table class="uk-table uk-table-hover">
     <tbody>
       <tr>
         <td>Version</td>
@@ -31,13 +31,13 @@
       </tr>
       <tr>
         <td>Created At</td>
-        <td>{{ version.created_at | datetime}}</td>
+        <td>{{ version.created_at | datetime }}</td>
       </tr>
     </tbody>
   </table>
 
   <h2>Columns</h2>
-  <table class="pure-table pure-table-horizontal">
+  <table class="uk-table uk-table-hover">
     <thead>
       <tr>
         <th>Name</th>
@@ -62,33 +62,58 @@
     </tbody>
   </table>
 
-  <h2>Partitions</h2>
-  <table class="pure-table pure-table-horizontal">
-    <thead>
-      <tr>
-        {% for key in version.keys %}
-          <th>{{ key }}</th>
-        {% endfor %}
-        <th>Path</th>
-        <th>Row Count</th>
-        <th>Start Time</th>
-        <th>End Time</th>
-        <th>Created At</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for partition in partitions %}
-        <tr>
-          {% for value in partition.vals %}
-            <td>{{ value }}</td>
+
+  <form id="new-partition" method="post" action="{{ url_for('partitions.partition_new_html', hub_id=hub_id, dataset_id=dataset_id, version=version_int) }}">
+    <fieldset class="top-row-input uk-fieldset">
+      <h2>Partitions</h2>
+      <button class="add-row uk-button uk-button-active">Add Partition</button>
+      <table class="uk-table uk-table-hover">
+        <thead>
+          <tr>
+            {% for key in version.partition_keys %}
+              <th>{{ key }}</th>
+            {% endfor %}
+            <th>Path</th>
+            <th>Row Count</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Created At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr hidden class="input-row">
+            {% for _ in version.partition_keys %}
+              <td><input class="uk-input" name="partition_keys[]" type="text"></td>
+            {% endfor %}
+            <td><input class="uk-input" name="path" type="text"></td>
+            <td><input class="uk-input" name="row_count" type="number"></td>
+            <td>
+              <input class="uk-checkbox" name="start_time" type="checkbox">
+              <input class="uk-input" name="start_time" type="date"></td>
+            <td>
+              <input class="uk-checkbox" name="end_time" type="checkbox">
+              <input class="uk-input" name="end_time" type="date">
+            </td>
+            <td><button class="remove-row uk-button">Remove</button></td>
+          </tr>
+          {% for partition in partitions %}
+            <tr>
+              {% for value in partition.partition_values %}
+                <td>{{ value }}</td>
+              {% endfor %}
+              <td>{{ partition.path }}</td>
+              <td>{{ partition.row_count }}</td>
+              <td>{{ partition.start_time | datetime }}</td>
+              <td>{{ partition.end_time | datetime }}</td>
+              <td>{{ partition.created_at | datetime }}</td>
+            </tr>
           {% endfor %}
-          <td>{{ partition.path }}</td>
-          <td>{{ partition.row_count }}</td>
-          <td>{{ partition.start_time }}</td>
-          <td>{{ partition.end_time }}</td>
-          <td>{{ partition.created_at | datetime }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        </tbody>
+      </table>
+    </fieldset>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='topRowInput.js') }}"></script>
 {% endblock %}

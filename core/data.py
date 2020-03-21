@@ -108,7 +108,7 @@ class DatasetVersion(Entry):
 
     backend_id:     int
     path:           pl.Path
-    keys:           t.List[str]
+    partition_keys: t.List[str]
     description:    t.Optional[str]
     is_overlapping: str
     created_at:     dt.datetime
@@ -214,13 +214,13 @@ class Partition(Entry):
     version:    int
     id:         uuid.UUID
 
-    vals:       t.List[str]
-    path:       pl.Path
-    row_count:  t.Optional[int]
-    start_time: t.Optional[dt.datetime]
-    end_time:   t.Optional[dt.datetime]
-    created_at: dt.datetime
-    deleted_at: t.Optional[dt.datetime]
+    partition_values: t.List[str]
+    path:            pl.Path
+    row_count:       t.Optional[int]
+    start_time:      t.Optional[dt.datetime]
+    end_time:        t.Optional[dt.datetime]
+    created_at:      dt.datetime
+    deleted_at:      t.Optional[dt.datetime]
 
     table_name = 'partitions'
 
@@ -255,7 +255,7 @@ def truncate(cursor, kind):
 
 
 if __name__ == '__main__':
-    conn = psql.connect('dbname=dh user=postgres')
+    conn = psql.connect('dbname=dh user=postgres host=localhost')
     cursor = conn.cursor()
 
     for kind in [Hub, Dataset, Backend, DatasetVersion, PublishedVersion, Type, Column, Partition]:

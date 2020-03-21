@@ -32,6 +32,7 @@ def version_detail_html(hub_id, dataset_id, version):
     return flask.render_template('versions/detail.html.j2',
                                  hub_id=hub_id,
                                  dataset_id=dataset_id,
+                                 version_int=version,
                                  **details)
 
 

@@ -1,14 +1,16 @@
 {% extends 'base.html.j2' %}
 
-{% block menu %}{% endblock %}
+{% block menu %}
+  <li class="uk-active"><a href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
+{% endblock %}
 
 {% block header %}
-  <h1>Hub List</h1>
+  Hub List
 {% endblock %}
 
 {% block content %}
-  <a class="pure-button pure-button-primary" href="{{ url_for('hubs.hub_new_html') }}">Add Hub</a>
-  <table class="pure-table pure-table-horizontal">
+  <a class="uk-button uk-button-primary" href="{{ url_for('hubs.hub_new_html') }}">Add Hub</a>
+  <table class="data-table uk-table uk-table-hover">
     <thead>
       <tr>
         <th>Name</th>

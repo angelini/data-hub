@@ -226,7 +226,7 @@ class DetailVersion(View):
         } for row in cursor.fetchall()]
 
         cursor.execute('''
-            SELECT vals, path, row_count, start_time, end_time, created_at
+            SELECT partition_values, path, row_count, start_time, end_time, created_at
             FROM partitions
             WHERE
                 hub_id = %s
@@ -235,7 +235,7 @@ class DetailVersion(View):
             ORDER BY end_time DESC;
         ''', (self.hub_id, self.dataset_id, self.version))
         partitions = [{
-            'vals': row[0],
+            'partition_values': row[0],
             'path': row[1],
             'row_count': row[2],
             'start_time': row[3],
@@ -244,7 +244,7 @@ class DetailVersion(View):
         } for row in cursor.fetchall()]
 
         cursor.execute('''
-            SELECT keys, module, path, description, created_at
+            SELECT partition_keys, module, path, description, created_at
             FROM versions_with_backend
             WHERE
                 hub_id = %s
@@ -258,7 +258,7 @@ class DetailVersion(View):
                 'hub_id': self.hub_id,
                 'dataset_id': self.dataset_id,
                 'version': self.version,
-                'keys': row[0],
+                'partition_keys': row[0],
                 'module': row[1],
                 'path': row[2],
                 'description': row[3],
@@ -270,6 +270,6 @@ class DetailVersion(View):
 
 
 def execute(action):
-    conn = psql.connect('dbname=dh user=postgres')
+    conn = psql.connect('dbname=dh user=postgres host=localhost')
     action.execute(conn.cursor())
     conn.commit()
