@@ -1,18 +1,14 @@
 {% extends 'base.html.j2' %}
 
-{% block menu %}
+{% block nav %}
   <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
   <li class="uk-parent"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}">Datasets</a></li>
   <li class="uk-parent"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}">Versions</a></li>
 {% endblock %}
 
-{% block header %}
-  New Version
-{% endblock %}
-
 {% block content %}
   <form id="new-version" class="uk-form-horizontal" action="{{ url_for('versions.version_new_html', hub_id=hub_id, dataset_id=dataset_id) }}" method="post">
-    <fieldset class="uk-fieldset">
+    <fieldset class="uk-fieldset uk-container-small">
       <div class="uk-margin">
         <label class="uk-form-label" for="backend">Backend Name</label>
         <div class="uk-form-controls">
@@ -47,10 +43,16 @@
     </fieldset>
   </form>
 
-  <form>
+  <form class="uk-form-stacked uk-padding uk-padding-remove-horizontal">
     <fieldset class="dynamic-rows uk-fieldset">
-      <h2>Columns</h2>
-      <button class="add-row uk-button">Add Column</button>
+      <div class="uk-flex uk-flex-middle">
+        <div>
+          <span class="uk-text-large">Columns</span>
+        </div>
+        <div>
+          <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+        </div>
+      </div>
       <table class="uk-table uk-table-hover">
         <thead>
           <tr>
@@ -85,27 +87,32 @@
               <input class="uk-checkbox" type="checkbox">
               <input hidden checked name="column_has_pii[]" type="text" value="false" form="new-version">
             </td>
-            <td><button class="remove-row uk-button">Remove</button></td>
+            <td>
+              <a class="remove-row uk-icon-link"><span uk-icon="trash"></span></a>
+            </td>
           </tr>
         </tbody>
       </table>
     </fieldset>
   </form>
 
-  <form class="uk-form-stacked">
+  <form class="uk-form-stacked uk-container-small uk-padding uk-padding-remove-horizontal uk-padding-remove-top">
     <fieldset class="dynamic-rows uk-fieldset">
-      <h2>Partition Keys</h2>
-      <button class="add-row uk-button">Add Partition Key</button>
+      <div class="uk-flex uk-flex-middle">
+        <div>
+          <span class="uk-text-large">Partition Keys</span>
+        </div>
+        <div>
+          <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+        </div>
+      </div>
       <table class="uk-table uk-table-hover">
-        <thead>
-          <tr>
-            <th>Key</th>
-          </tr>
-        </thead>
         <tbody>
           <tr>
             <td><input class="uk-input" name="partition_name[]" type="text" placeholder="Key" form="new-version"></td>
-            <td><button class="remove-row uk-button">Remove</button></td>
+            <td>
+              <a class="remove-row uk-icon-link"><span uk-icon="trash"></span></a>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -113,7 +120,7 @@
   </form>
 
   <form class="uk-form-stacked">
-    <fieldset>
+    <fieldset class="uk-fieldset">
       <div class="uk-margin">
         <button type="submit" class="uk-button uk-button-primary" form="new-version">Add Version</button>
       </div>

@@ -11,26 +11,35 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='uikit/uikit.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='datatables/dataTables.uikit.css') }}">
 
-    <script src="{{ url_for('static', filename='uikit/uikit.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='uikit/uikit-icons.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='uikit/uikit.js') }}"></script>
+    <script src="{{ url_for('static', filename='uikit/uikit-icons.js') }}"></script>
     <script src="{{ url_for('static', filename='datatables/jquery.js') }}" defer></script>
     <script src="{{ url_for('static', filename='datatables/jquery.dataTables.js') }}" defer></script>
     <script src="{{ url_for('static', filename='datatables/dataTables.uikit.js') }}" defer></script>
   </head>
   <body>
-    <header>
-      <nav class="uk-navbar-container">
-        <div class="uk-navbar-left">
-          <ul class="uk-navbar-nav">
-            {% block menu %}{% endblock %}
-          </ul>
+    <header class="uk-container-large uk-padding-small">
+      <div uk-grid>
+        <div class="uk-width-4-5">
+          <nav class="uk-navbar-container">
+            <div class="uk-navbar-left">
+              <ul class="uk-navbar-nav">
+                <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}"><span uk-icon="database"></span></a></li>
+                {% block nav %}{% endblock %}
+              </ul>
+            </div>
+          </nav>
         </div>
-      </nav>
-      <h1 class="uk-heading-small uk-heading-divider"><span>{% block header %}{% endblock %}</span></h1>
+        <div class="uk-width-1-5 uk-flex uk-flex-right uk-flex-middle">
+          {% block buttons %}{% endblock %}
+        </div>
+      </div>
     </header>
-    <section>
+
+    <section class="uk-container-large uk-padding-small uk-padding-remove-top">
       {% block content %}{% endblock %}
     </section>
+
     {% block scripts %}{% endblock %}
 
     <script>

@@ -1,24 +1,24 @@
 {% extends 'base.html.j2' %}
 
-{% block menu %}
+{% block nav %}
   <li><a class="uk-parent" href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
 {% endblock %}
 
-{% block header %}
-  New Hub
-{% endblock %}
-
 {% block content %}
-  <form class="uk-form-stacked" action="{{ url_for('hubs.hub_new_html') }}" method="post">
+  <form class="uk-form-horizontal" action="{{ url_for('hubs.hub_new_html') }}" method="post">
     <fieldset class="uk-fieldset">
       <div class="uk-margin">
         <label class="uk-form-label" for="name">Name</label>
-        <input id="name" class="uk-input" name="name" type="text" placeholder="Hub Name">
+        <div class="uk-form-controls">
+          <input id="name" class="uk-input" name="name" type="text" placeholder="Hub Name">
+        </div>
       </div>
 
       <div class="uk-margin">
         <label class="uk-form-label" for="hive-host">Hive Host</label>
-        <input id="hive-host" class="uk-input" name="hive_host" type="text" placeholder="hive://local">
+        <div class="uk-form-controls">
+          <input id="hive-host" class="uk-input" name="hive_host" type="text" placeholder="hive://local">
+        </div>
       </div>
 
       <div class="uk-margin">

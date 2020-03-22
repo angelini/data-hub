@@ -232,7 +232,7 @@ class DetailVersion(View):
                 hub_id = %s
             AND dataset_id = %s
             AND version = %s
-            ORDER BY end_time DESC;
+            ORDER BY end_time, start_time DESC;
         ''', (self.hub_id, self.dataset_id, self.version))
         partitions = [{
             'partition_values': row[0],

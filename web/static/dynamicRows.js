@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.dynamic-rows .add-row').forEach(button => {
             button.addEventListener('click', event => {
                 event.preventDefault();
-                let tableBody = event.target.parentElement.querySelector('tbody');
+                let tableBody = event.target.closest('form').querySelector('tbody');
                 addRow(tableBody, tableBody.querySelectorAll('tr'));
             });
     });

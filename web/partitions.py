@@ -1,3 +1,5 @@
+import datetime as dt
+
 import flask
 
 from core.engine import NewPartition
@@ -27,15 +29,29 @@ def partition_new_json(hub_id, dataset_id, version):
 def partition_new_html(hub_id, dataset_id, version):
     if flask.request.method == 'POST':
         data = flask.request.form
+        start_time, end_time = None, None
+
+        if data.get('start_date'):
+            if data.get('start_time'):
+                start_time = dt.datetime.strptime(f'{data["start_date"]} {data["start_time"]}', '%Y-%m-%d %H:%M')
+            else:
+                start_time = dt.datetime.strptime(data['start_date'], '%Y-%m-%d')
+
+        if data.get('end_date'):
+            if data.get('end_time'):
+                end_time = dt.datetime.strptime(f'{data["end_date"]} {data["end_time"]}', '%Y-%m-%d %H:%M')
+            else:
+                end_time = dt.datetime.strptime(data['end_date'], '%Y-%m-%d')
+
         write_action(
             NewPartition(hub_id,
                          dataset_id,
                          version,
-                         data.getlist('values[]'),
+                         data.getlist('partition_values[]'),
                          data['path'],
                          data.get('row_count'),
-                         data.get('start_time'),
-                         data.get('end_time'))
+                         start_time,
+                         end_time)
         )
         return flask.redirect(flask.url_for('versions.version_detail_html',
                                             hub_id=hub_id, dataset_id=dataset_id, version=version))
