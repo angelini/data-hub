@@ -6,16 +6,22 @@
 {% endblock %}
 
 {% block content %}
-  <form class="uk-form-horizontal" action="{{ url_for('datasets.dataset_new_html', hub_id=hub_id) }}" method="post">
+  <form class="uk-container-small uk-form-horizontal" action="{{ url_for('datasets.dataset_new_html', hub_id=hub_id) }}" method="post">
+    {% if error %}
+      <div class="uk-alert-danger" uk-alert>
+        <span>{{ error }}</span>
+        <a class="uk-alert-close" uk-close></a>
+      </div>
+    {% endif %}
     <fieldset class="uk-fieldset">
       <div class="uk-margin">
         <label class="uk-form-label" for="name">Name</label>
         <div class="uk-form-controls">
-          <input id="name" class="uk-input" name="name" type="text" placeholder="Dataset Name">
+          <input id="name" class="uk-input" name="name" type="text" placeholder="Dataset Name" required>
         </div>
       </div>
 
-      <div class="uk-margin">
+      <div class="uk-margin uk-form-controls">
         <button type="submit" class="uk-button uk-button-primary">Add Dataset</button>
       </div>
     </fieldset>

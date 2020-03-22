@@ -5,23 +5,29 @@
 {% endblock %}
 
 {% block content %}
-  <form class="uk-form-horizontal" action="{{ url_for('hubs.hub_new_html') }}" method="post">
+  <form class="uk-container-small uk-form-horizontal" action="{{ url_for('hubs.hub_new_html') }}" method="post">
+    {% if error %}
+      <div class="uk-alert-danger" uk-alert>
+        <span>{{ error }}</span>
+        <a class="uk-alert-close" uk-close></a>
+      </div>
+    {% endif %}
     <fieldset class="uk-fieldset">
       <div class="uk-margin">
         <label class="uk-form-label" for="name">Name</label>
         <div class="uk-form-controls">
-          <input id="name" class="uk-input" name="name" type="text" placeholder="Hub Name">
+          <input id="name" class="uk-input" name="name" type="text" placeholder="Hub Name" required>
         </div>
       </div>
 
       <div class="uk-margin">
         <label class="uk-form-label" for="hive-host">Hive Host</label>
         <div class="uk-form-controls">
-          <input id="hive-host" class="uk-input" name="hive_host" type="text" placeholder="hive://local">
+          <input id="hive-host" class="uk-input" name="hive_host" type="text" placeholder="hive://local" required>
         </div>
       </div>
 
-      <div class="uk-margin">
+      <div class="uk-margin uk-form-controls">
         <button type="submit" class="uk-button uk-button-primary">Add Hub</button>
       </div>
     </fieldset>

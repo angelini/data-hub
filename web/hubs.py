@@ -1,7 +1,7 @@
 import flask
 
 from core.engine import ListHubs, NewHub
-from web.db import read_view, write_action
+from web.db import DbException, read_view, write_action
 
 bp = flask.Blueprint('hubs', __name__, url_prefix='/hubs')
 
@@ -25,9 +25,14 @@ def hub_new_json():
 
 @bp.route('/new.html', methods=['GET', 'POST'])
 def hub_new_html():
+    error = None
+
     if flask.request.method == 'POST':
         data = flask.request.form
-        write_action(NewHub(data['name'], data['hive_host']))
-        return flask.redirect(flask.url_for('hubs.hubs_index_html'))
+        try:
+            write_action(NewHub(data['name'], data['hive_host']))
+            return flask.redirect(flask.url_for('hubs.hubs_index_html'))
+        except DbException as e:
+            error = str(e)
 
-    return flask.render_template('hubs/new.html.j2')
+    return flask.render_template('hubs/new.html.j2', error=error)

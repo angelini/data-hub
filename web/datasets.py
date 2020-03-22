@@ -1,7 +1,7 @@
 import flask
 
 from core.engine import ListDatasets, NewDataset
-from web.db import read_view, write_action
+from web.db import DbException, read_view, write_action
 
 bp = flask.Blueprint('datasets', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets')
 
@@ -27,9 +27,14 @@ def dataset_new_json(hub_id):
 
 @bp.route('/new.html', methods=['GET', 'POST'])
 def dataset_new_html(hub_id):
+    error = None
+
     if flask.request.method == 'POST':
         data = flask.request.form
-        write_action(NewDataset(hub_id, data['name']))
-        return flask.redirect(flask.url_for('datasets.datasets_index_html', hub_id=hub_id))
+        try:
+            write_action(NewDataset(hub_id, data['name']))
+            return flask.redirect(flask.url_for('datasets.datasets_index_html', hub_id=hub_id))
+        except DbException as e:
+            error = str(e)
 
-    return flask.render_template('datasets/new.html.j2', hub_id=hub_id)
+    return flask.render_template('datasets/new.html.j2', hub_id=hub_id, error=error)

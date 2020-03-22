@@ -4,6 +4,10 @@ import psycopg2.extras
 psql.extras.register_uuid()
 
 
+class DbException(Exception):
+    pass
+
+
 def read_view(view):
     conn = psql.connect('dbname=dh user=postgres host=localhost')
     try:
@@ -20,5 +24,7 @@ def write_action(action):
         result = action.execute(cursor)
         conn.commit()
         return result
+    except psql.errors.DatabaseError as e:
+        raise DbException(e.diag.message_primary)
     finally:
         conn.close()

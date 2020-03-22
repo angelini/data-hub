@@ -2,7 +2,7 @@ import flask
 
 from core.data import Backends, Types
 from core.engine import DetailVersion, ListVersions, NewDatasetVersion
-from web.db import read_view, write_action
+from web.db import DbException, read_view, write_action
 
 bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions')
 
@@ -53,6 +53,8 @@ def version_new_json(hub_id, dataset_id):
 
 @bp.route('/new.html', methods=['GET', 'POST'])
 def version_new_html(hub_id, dataset_id):
+    error = None
+
     if flask.request.method == 'POST':
         data = flask.request.form
         columns = []
@@ -66,19 +68,23 @@ def version_new_html(hub_id, dataset_id):
                 data.getlist('column_has_pii[]')[i] == 'true',
             ])
 
-        write_action(
-            NewDatasetVersion(hub_id,
-                              dataset_id,
-                              data['backend'],
-                              data['path'],
-                              data['description'],
-                              bool(data.get('is_overlapping')),
-                              columns)
-        )
-        return flask.redirect(flask.url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id))
+        try:
+            write_action(
+                NewDatasetVersion(hub_id,
+                                  dataset_id,
+                                  data['backend'],
+                                  data['path'],
+                                  data['description'],
+                                  bool(data.get('is_overlapping')),
+                                  columns)
+            )
+            return flask.redirect(flask.url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id))
+        except DbException as e:
+            error = str(e)
 
     return flask.render_template('versions/new.html.j2',
                                  hub_id=hub_id,
                                  dataset_id=dataset_id,
                                  backends=Backends,
-                                 types=Types)
+                                 types=Types,
+                                 error=error)

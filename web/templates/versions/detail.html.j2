@@ -89,10 +89,10 @@
         <tbody>
           <tr hidden class="input-row">
             {% for _ in version.partition_keys %}
-              <td><input class="uk-input" name="partition_values[]" type="text"></td>
+              <td><input class="uk-input" name="partition_values[]" type="text" required></td>
             {% endfor %}
-            <td><input class="uk-input" name="path" type="text"></td>
-            <td><input class="uk-input" name="row_count" type="number"></td>
+            <td><input class="uk-input" name="path" type="text" required></td>
+            <td><input class="uk-input" name="row_count" type="number" min="0"></td>
             <td>
               <div class="uk-flex">
                 <div>
