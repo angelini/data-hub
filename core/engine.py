@@ -1,4 +1,5 @@
 import abc
+import collections as cl
 import dataclasses as dc
 import datetime as dt
 import pathlib as pl
@@ -46,6 +47,7 @@ class NewDatasetVersion(Action):
     dataset_id:     uuid.UUID
     backend:        str
     path:           pl.Path
+    partition_keys: t.List[str]
     description:    str
     is_overlapping: bool
     columns:        t.List[t.Tuple[str, str, str, bool, bool, bool]]
@@ -65,6 +67,7 @@ class NewDatasetVersion(Action):
                                      latest_version + 1,
                                      Backend.by_module(self.backend).id,
                                      self.path,
+                                     self.partition_keys,
                                      self.description,
                                      self.is_overlapping,
                                      dt.datetime.now(tz=pytz.utc)))
@@ -267,6 +270,65 @@ class DetailVersion(View):
             'columns': columns,
             'partitions': partitions,
         }
+
+
+@dc.dataclass
+class PublishedVersions(View):
+
+    def fetch(self, cursor):
+        published = cl.defaultdict(lambda: cl.defaultdict(list))
+
+        cursor.execute('''
+            SELECT hub_id, hub_name, dataset_id, dataset_name, version
+            FROM current_published_versions_with_names;
+        ''')
+        for row in cursor.fetchall():
+            published[(row[0], row[1])][(row[2], row[3])].append(row[4])
+
+        return published
+
+
+class Validation(abc.ABC):
+
+    @abc.abstractmethod
+    def check(self, cursor):
+        pass
+
+
+@dc.dataclass
+class OverlappingPartitions(Validation):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def check(self, cursor):
+        cursor.execute('''
+            SELECT is_overlapping
+            FROM dataset_versions
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+        ''', (self.hub_id, self.dataset_id, self.version))
+        if cursor.fetchone()[0]:
+            return True
+
+        cursor.execute('''
+            SELECT id
+            FROM partitions_with_last_end_time
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+        ''', (self.hub_id, self.dataset_id, self.version))
+        return cursor.rowcount == 0
+
+
+@dc.dataclass
+class DependencyLoops(Validation):
+
+    def check(self, cursor):
+        pass
 
 
 def execute(action):

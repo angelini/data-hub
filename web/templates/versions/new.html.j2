@@ -49,16 +49,16 @@
     </fieldset>
   </form>
 
-  <form class="uk-form-stacked uk-padding uk-padding-remove-horizontal">
-    <fieldset class="dynamic-rows uk-fieldset">
-      <div class="uk-flex uk-flex-middle">
-        <div>
-          <span class="uk-text-large">Columns</span>
-        </div>
-        <div>
-          <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
-        </div>
+  <form class="dynamic-rows uk-form-stacked uk-padding uk-padding-remove-horizontal">
+    <div class="uk-flex uk-flex-middle">
+      <div>
+        <span class="uk-text-large">Columns</span>
       </div>
+      <div>
+        <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+      </div>
+    </div>
+    <fieldset class="uk-fieldset" hidden disabled>
       <table class="uk-table uk-table-hover">
         <thead>
           <tr>
@@ -102,20 +102,57 @@
     </fieldset>
   </form>
 
-  <form class="uk-form-stacked uk-container-small uk-padding uk-padding-remove-horizontal uk-padding-remove-top">
-    <fieldset class="dynamic-rows uk-fieldset">
-      <div class="uk-flex uk-flex-middle">
-        <div>
-          <span class="uk-text-large">Partition Keys</span>
-        </div>
-        <div>
-          <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
-        </div>
+  <form class="dynamic-rows uk-form-stacked uk-container-small uk-padding uk-padding-remove-horizontal uk-padding-remove-top">
+    <div class="uk-flex uk-flex-middle">
+      <div>
+        <span class="uk-text-large">Partition Keys</span>
       </div>
+      <div>
+        <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+      </div>
+    </div>
+    <fieldset class="uk-fieldset" hidden disabled>
       <table class="uk-table uk-table-hover">
         <tbody>
           <tr>
-            <td><input class="uk-input" name="partition_name[]" type="text" placeholder="Key" form="new-version"></td>
+            <td><input class="uk-input" name="partition_key[]" type="text" placeholder="Key" form="new-version"></td>
+            <td>
+              <a class="remove-row uk-icon-link"><span uk-icon="trash"></span></a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </fieldset>
+  </form>
+
+  <form class="dynamic-rows uk-form-stacked uk-container-small uk-padding uk-padding-remove-horizontal uk-padding-remove-top">
+    <div class="uk-flex uk-flex-middle">
+      <div>
+        <span class="uk-text-large">Dependencies</span>
+      </div>
+      <div>
+        <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+      </div>
+    </div>
+    <fieldset class="uk-fieldset" hidden disabled>
+      <table class="uk-table uk-table-hover">
+        <tbody>
+          <tr>
+            <td>
+              <select class="uk-select" name="dependency_hub_id[]" form="new-version">
+                {% for (id, name) in published %}
+                  <option value="{{ id }}">{{ name }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <select class="uk-select" name="dependency_dataset_id[]" form="new-version">
+              </select>
+            </td>
+            <td>
+              <select class="uk-select" name="dependency_version[]" form="new-version">
+              </select>
+            </td>
             <td>
               <a class="remove-row uk-icon-link"><span uk-icon="trash"></span></a>
             </td>

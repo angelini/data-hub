@@ -130,6 +130,28 @@ class DatasetVersion(Entry):
 
 
 @dc.dataclass
+class Dependency(Entry):
+    parent_hub_id:     uuid.UUID
+    parent_dataset_id: uuid.UUID
+    parent_version:    int
+    child_hub_id:      uuid.UUID
+    child_dataset_id:  uuid.UUID
+    child_version:     int
+
+    table_name = 'dependencies'
+
+    @staticmethod
+    def sample(parent_hub_id, parent_dataset_id, parent_version,
+               child_hub_id, child_dataset_id, child_version):
+        return Dependency(parent_hub_id,
+                          parent_dataset_id,
+                          parent_version,
+                          child_hub_id,
+                          child_dataset_id,
+                          child_version)
+
+
+@dc.dataclass
 class PublishedVersion(Entry):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID

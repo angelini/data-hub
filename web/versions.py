@@ -1,7 +1,7 @@
 import flask
 
 from core.data import Backends, Types
-from core.engine import DetailVersion, ListVersions, NewDatasetVersion
+from core.engine import DetailVersion, ListVersions, NewDatasetVersion, PublishedVersions
 from web.db import DbException, read_view, write_action
 
 bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions')
@@ -57,16 +57,17 @@ def version_new_html(hub_id, dataset_id):
 
     if flask.request.method == 'POST':
         data = flask.request.form
-        columns = []
-        for i in range(0, len(data.getlist('column_name[]'))):
-            columns.append([
-                data.getlist('column_name[]')[i],
-                data.getlist('column_type[]')[i],
-                data.getlist('column_description[]')[i],
-                data.getlist('column_is_nullable[]')[i] == 'true',
-                data.getlist('column_is_unique[]')[i] == 'true',
-                data.getlist('column_has_pii[]')[i] == 'true',
-            ])
+        columns = [
+            [
+                name,
+                data.getlist('column_type[]')[idx],
+                data.getlist('column_description[]')[idx],
+                data.getlist('column_is_nullable[]')[idx] == 'true',
+                data.getlist('column_is_unique[]')[idx] == 'true',
+                data.getlist('column_has_pii[]')[idx] == 'true',
+            ]
+            for (idx, name) in enumerate(data.getlist('column_name[]'))
+        ]
 
         try:
             write_action(
@@ -74,6 +75,7 @@ def version_new_html(hub_id, dataset_id):
                                   dataset_id,
                                   data['backend'],
                                   data['path'],
+                                  data.getlist('partition_key[]'),
                                   data['description'],
                                   bool(data.get('is_overlapping')),
                                   columns)
@@ -82,9 +84,11 @@ def version_new_html(hub_id, dataset_id):
         except DbException as e:
             error = str(e)
 
+    published = read_view(PublishedVersions())
     return flask.render_template('versions/new.html.j2',
                                  hub_id=hub_id,
                                  dataset_id=dataset_id,
                                  backends=Backends,
                                  types=Types,
-                                 error=error)
+                                 error=error,
+                                 published=published)

@@ -23,28 +23,30 @@ DROP TABLE IF EXISTS read_access  CASCADE;
 DROP TABLE IF EXISTS write_access CASCADE;
 
 DROP INDEX IF EXISTS partitions_values_idx;
-
+DROP INDEX IF EXISTS child_dependencies_idx;
 
 CREATE TABLE IF NOT EXISTS hubs (
     id         uuid,
 
-    name       text      UNIQUE,
+    name       text        UNIQUE NOT NULL,
     hive_host  text,
-    created_at timestamp WITH time zone,
+    created_at timestamptz,
 
-    PRIMARY KEY(id)
+    PRIMARY KEY(id),
+    CONSTRAINT name_length CHECK (char_length(name) > 2)
 );
 
 CREATE TABLE IF NOT EXISTS datasets (
     hub_id     uuid,
     id         uuid,
 
-    name       text      NOT NULL,
-    created_at timestamp WITH time zone NOT NULL,
-    deleted_at timestamp WITH time zone,
+    name       text        NOT NULL,
+    created_at timestamptz NOT NULL,
+    deleted_at timestamptz,
 
     PRIMARY KEY (hub_id, id),
-    FOREIGN KEY (hub_id) REFERENCES hubs(id)
+    FOREIGN KEY (hub_id) REFERENCES hubs(id),
+    CONSTRAINT name_length CHECK (char_length(name) > 2)
 );
 
 CREATE TABLE IF NOT EXISTS backends (
@@ -52,7 +54,8 @@ CREATE TABLE IF NOT EXISTS backends (
 
     module text NOT NULL UNIQUE,
 
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CONSTRAINT valid_python_module CHECK (module ~ '^[A-Za-z_][A-Za-z0-9_.]*')
 );
 
 CREATE TABLE IF NOT EXISTS dataset_versions (
@@ -60,12 +63,12 @@ CREATE TABLE IF NOT EXISTS dataset_versions (
     dataset_id  uuid,
     version     int,
 
-    backend_id     int       NOT NULL,
-    partition_keys text[]    NOT NULL,
-    path           text      NOT NULL,
-    description    text      NOT NULL,
-    is_overlapping boolean   NOT NULL,
-    created_at     timestamp WITH time zone NOT NULL,
+    backend_id     int         NOT NULL,
+    partition_keys text[]      NOT NULL,
+    path           text        NOT NULL,
+    description    text        NOT NULL,
+    is_overlapping boolean     NOT NULL,
+    created_at     timestamptz NOT NULL,
 
     PRIMARY KEY (hub_id, dataset_id, version),
     FOREIGN KEY (hub_id, dataset_id) REFERENCES datasets(hub_id, id),
@@ -78,8 +81,14 @@ CREATE TABLE IF NOT EXISTS dependencies (
     parent_version    int,
     child_hub_id      uuid,
     child_dataset_id  uuid,
-    child_version     int
+    child_version     int,
+
+    PRIMARY KEY (parent_hub_id, parent_dataset_id, parent_version, child_hub_id, child_dataset_id, child_version),
+    FOREIGN KEY (parent_hub_id, parent_dataset_id, parent_version) REFERENCES dataset_versions(hub_id, dataset_id, version),
+    FOREIGN KEY (child_hub_id, child_dataset_id, child_version) REFERENCES dataset_versions(hub_id, dataset_id, version)
 );
+
+CREATE INDEX child_dependencies_idx ON dependencies(child_hub_id, child_dataset_id, child_version);
 
 CREATE TABLE IF NOT EXISTS types (
     id        int,
@@ -113,7 +122,7 @@ CREATE TABLE IF NOT EXISTS published_versions (
     dataset_id   uuid,
     version      int,
 
-    published_at time WITH time zone,
+    published_at timestamptz,
 
     PRIMARY KEY (hub_id, dataset_id, version),
     FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version)
@@ -126,12 +135,12 @@ CREATE TABLE IF NOT EXISTS partitions (
     id                uuid,
 
     partition_values text[],
-    path             text      NOT NULL,
+    path             text        NOT NULL,
     row_count        int,
-    start_time       timestamp WITH time zone,
-    end_time         timestamp WITH time zone,
-    created_at       timestamp WITH time zone NOT NULL,
-    deleted_at       timestamp WITH time zone,
+    start_time       timestamptz,
+    end_time         timestamptz,
+    created_at       timestamptz NOT NULL,
+    deleted_at       timestamptz,
 
     PRIMARY KEY (hub_id, dataset_id, version, id),
     FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version)
@@ -159,8 +168,8 @@ CREATE TABLE IF NOT EXISTS user_roles (
     user_id    uuid,
     role_id    uuid,
 
-    created_at timestamp WITH time zone NOT NULL,
-    deleted_at timestamp WITH time zone,
+    created_at timestamptz NOT NULL,
+    deleted_at timestamptz,
 
     PRIMARY KEY (user_id, role_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
@@ -172,8 +181,8 @@ CREATE TABLE IF NOT EXISTS admin_access (
     hub_id     uuid,
     id         uuid,
 
-    created_at timestamp WITH time zone NOT NULL,
-    revoked_at timestamp WITH time zone,
+    created_at timestamptz NOT NULL,
+    revoked_at timestamptz,
 
     PRIMARY KEY (role_id, hub_id, id),
     FOREIGN KEY (role_id) REFERENCES roles(id),
@@ -186,8 +195,8 @@ CREATE TABLE IF NOT EXISTS read_access (
     dataset_id uuid,
     id         uuid,
 
-    created_at timestamp WITH time zone NOT NULL,
-    revoked_at timestamp WITH time zone,
+    created_at timestamptz NOT NULL,
+    revoked_at timestamptz,
 
     PRIMARY KEY (role_id, hub_id, id),
     FOREIGN KEY (role_id) REFERENCES roles(id),
@@ -200,8 +209,8 @@ CREATE TABLE IF NOT EXISTS write_access (
     dataset_id uuid,
     id         uuid,
 
-    created_at timestamp WITH time zone NOT NULL,
-    revoked_at timestamp WITH time zone,
+    created_at timestamptz NOT NULL,
+    revoked_at timestamptz,
 
     PRIMARY KEY (role_id, hub_id, id),
     FOREIGN KEY (role_id) REFERENCES roles(id),
@@ -230,18 +239,32 @@ CREATE OR REPLACE VIEW current_published_versions AS
     FROM ranked ran
     WHERE ran.idx = 1;
 
+CREATE OR REPLACE VIEW current_published_versions_with_names AS
+    SELECT
+        pub.hub_id,
+        hub.name AS hub_name,
+        pub.dataset_id,
+        dat.name AS dataset_name,
+        pub.version,
+        pub.published_at
+    FROM
+        current_published_versions as pub
+    INNER JOIN hubs hub ON pub.hub_id = hub.id
+    INNER JOIN datasets dat ON pub.dataset_id = dat.id;
+
+
 CREATE OR REPLACE VIEW datasets_with_current_versions AS
     SELECT
         dat.hub_id,
         dat.id,
         dat.name,
-        cur.version,
+        pub.version,
         dat.created_at,
-        cur.published_at
+        pub.published_at
     FROM
         datasets dat
     LEFT JOIN
-        current_published_versions cur ON dat.id = cur.dataset_id
+        current_published_versions pub ON dat.id = pub.dataset_id
     WHERE dat.deleted_at IS NULL;
 
 CREATE OR REPLACE VIEW versions_with_backend AS
@@ -275,3 +298,18 @@ CREATE OR REPLACE VIEW columns_with_type AS
         columns col
     INNER JOIN
         types typ ON col.type_id = typ.id;
+
+CREATE OR REPLACE VIEW partitions_with_last_end_time AS
+    SELECT
+        par.hub_id,
+        par.dataset_id,
+        par.version,
+        par.id,
+        par.start_time,
+        par.end_time,
+        LAG(par.end_time, 1) OVER (
+            PARTITION BY par.hub_id, par.dataset_id, par.version
+            ORDER BY par.start_time
+        ) last_end_time
+    FROM
+        partitions par;

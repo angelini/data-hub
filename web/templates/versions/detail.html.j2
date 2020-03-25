@@ -50,9 +50,15 @@
           <td>{{ column.name }}</td>
           <td>{{ column.type_name }}</td>
           <td>{{ column.description }}</td>
-          <td>{{ column.is_nullable }}</td>
-          <td>{{ column.is_unique }}</td>
-          <td>{{ column.has_pii }}</td>
+          <td>
+            <input class="uk-checkbox" type="checkbox" disabled {% if column.is_nullable %}checked{% endif %}>
+          </td>
+          <td>
+            <input class="uk-checkbox" type="checkbox" disabled {% if column.is_unique %}checked{% endif %}>
+          </td>
+          <td>
+            <input class="uk-checkbox" type="checkbox" disabled {% if column.has_pii %}checked{% endif %}>
+          </td>
         </tr>
       {% endfor %}
     </tbody>
