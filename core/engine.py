@@ -9,7 +9,7 @@ import typing as t
 import psycopg2 as psql
 import pytz
 
-from core.data import Backend, Column, Dataset, DatasetVersion, Hub, Partition, Type, write
+from core.data import Backend, Column, Dataset, DatasetVersion, Hub, Partition, PublishedVersion, Type, write
 
 
 class Action(abc.ABC):
@@ -91,13 +91,26 @@ class NewDatasetVersion(Action):
 
 
 @dc.dataclass
+class PublishVersion(Action):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def execute(self, cursor):
+        write(cursor, PublishedVersion(self.hub_id,
+                                       self.dataset_id,
+                                       self.version,
+                                       dt.datetime.now(tz=pytz.utc)))
+
+
+@dc.dataclass
 class NewPartition(Action):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
     version:    int
 
-    values:     t.List[str]
     path:       str
+    values:     t.List[str]
     row_count:  t.Optional[int]
     start_time: t.Optional[dt.datetime]
     end_time:   t.Optional[dt.datetime]
@@ -108,8 +121,8 @@ class NewPartition(Action):
                                 self.dataset_id,
                                 self.version,
                                 partition_id,
-                                self.values,
                                 self.path,
+                                self.values,
                                 self.row_count,
                                 self.start_time,
                                 self.end_time,
@@ -283,12 +296,12 @@ class PublishedVersions(View):
             FROM current_published_versions_with_names;
         ''')
         for row in cursor.fetchall():
-            published[(row[0], row[1])][(row[2], row[3])].append(row[4])
+            published[f'{row[0]}:{row[1]}'][f'{row[2]}:{row[3]}'].append(row[4])
 
         return published
 
 
-class Validation(abc.ABC):
+class Assertion(abc.ABC):
 
     @abc.abstractmethod
     def check(self, cursor):
@@ -296,15 +309,17 @@ class Validation(abc.ABC):
 
 
 @dc.dataclass
-class OverlappingPartitions(Validation):
+class NoOverlappingPartitions(Assertion):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
     version:    int
 
     def check(self, cursor):
         cursor.execute('''
-            SELECT is_overlapping
-            FROM dataset_versions
+            SELECT
+                is_overlapping
+            FROM
+                dataset_versions
             WHERE
                 hub_id = %s
             AND dataset_id = %s
@@ -314,8 +329,10 @@ class OverlappingPartitions(Validation):
             return True
 
         cursor.execute('''
-            SELECT id
-            FROM partitions_with_last_end_time
+            SELECT
+                id
+            FROM
+                partitions_with_last_end_time
             WHERE
                 hub_id = %s
             AND dataset_id = %s
@@ -325,7 +342,27 @@ class OverlappingPartitions(Validation):
 
 
 @dc.dataclass
-class DependencyLoops(Validation):
+class VersionExists(Assertion):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def check(self, cursor):
+        cursor.execute('''
+            SELECT
+                1
+            FROM
+                dataset_versions
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+        ''')
+        return cursor.rowcount == 1
+
+
+@dc.dataclass
+class NoDependencyLoops(Assertion):
 
     def check(self, cursor):
         pass

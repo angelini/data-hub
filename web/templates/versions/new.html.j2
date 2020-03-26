@@ -134,23 +134,24 @@
         <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
       </div>
     </div>
-    <fieldset class="uk-fieldset" hidden disabled>
+    <fieldset id="version-dropdown" class="uk-fieldset" hidden disabled>
       <table class="uk-table uk-table-hover">
         <tbody>
           <tr>
             <td>
-              <select class="uk-select" name="dependency_hub_id[]" form="new-version">
-                {% for (id, name) in published %}
+              <select class="hub-dropdown uk-select" name="dependency_hub_id[]" form="new-version">
+                {% for version in published.keys() %}
+                {% set id, name = version.split(':') %}
                   <option value="{{ id }}">{{ name }}</option>
                 {% endfor %}
               </select>
             </td>
             <td>
-              <select class="uk-select" name="dependency_dataset_id[]" form="new-version">
+              <select class="dataset-dropdown uk-select" name="dependency_dataset_id[]" form="new-version">
               </select>
             </td>
             <td>
-              <select class="uk-select" name="dependency_version[]" form="new-version">
+              <select class="version-dropdown uk-select" name="dependency_version[]" form="new-version">
               </select>
             </td>
             <td>
@@ -172,5 +173,9 @@
 {% endblock %}
 
 {% block scripts %}
+  <script type="text/javascript">
+    const publishedVersions = {{ published | tojson | safe }};
+  </script>
   <script src="{{ url_for('static', filename='dynamicRows.js') }}"></script>
+  <script src="{{ url_for('static', filename='versionDropdown.js') }}"></script>
 {% endblock %}

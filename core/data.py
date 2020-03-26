@@ -8,11 +8,6 @@ import uuid
 
 import faker
 import pytz
-import psycopg2 as psql
-import psycopg2.extras
-
-
-psql.extras.register_uuid()
 
 
 class Entry(abc.ABC):
@@ -236,13 +231,13 @@ class Partition(Entry):
     version:    int
     id:         uuid.UUID
 
+    path:             pl.Path
     partition_values: t.List[str]
-    path:            pl.Path
-    row_count:       t.Optional[int]
-    start_time:      t.Optional[dt.datetime]
-    end_time:        t.Optional[dt.datetime]
-    created_at:      dt.datetime
-    deleted_at:      t.Optional[dt.datetime]
+    row_count:        t.Optional[int]
+    start_time:       t.Optional[dt.datetime]
+    end_time:         t.Optional[dt.datetime]
+    created_at:       dt.datetime
+    deleted_at:       t.Optional[dt.datetime]
 
     table_name = 'partitions'
 
@@ -270,60 +265,3 @@ def write(cursor, entry):
                    f'({", ".join(entry.columns)}) '
                    f'VALUES ({", ".join(["%s" for _ in entry.columns])})',
                    entry.values)
-
-
-def truncate(cursor, kind):
-    cursor.execute(f'TRUNCATE TABLE {kind.table_name} CASCADE')
-
-
-if __name__ == '__main__':
-    conn = psql.connect('dbname=dh user=postgres host=localhost')
-    cursor = conn.cursor()
-
-    for kind in [Hub, Dataset, Backend, DatasetVersion, PublishedVersion, Type, Column, Partition]:
-        truncate(cursor, kind)
-
-    h1 = Hub.sample()
-    h2 = Hub.sample()
-
-    d1 = Dataset.sample(h1.id)
-    d2 = Dataset.sample(h2.id)
-
-    d1_v1 = DatasetVersion.sample(d1.hub_id, d1.id, 1, ["idx"])
-    d1_v2 = DatasetVersion.sample(d1.hub_id, d1.id, 2, ["idx"])
-
-    d1_v1_c1 = Column.sample(d1_v1.hub_id, d1_v1.dataset_id, d1_v1.version, 0)
-    d1_v1_c2 = Column.sample(d1_v1.hub_id, d1_v1.dataset_id, d1_v1.version, 1)
-    d1_v2_c1 = Column.sample(d1_v2.hub_id, d1_v2.dataset_id, d1_v2.version, 0)
-
-    d1_v1_p1 = Partition.sample(d1_v1.hub_id, d1_v1.dataset_id, d1_v1.version, ["01"])
-    d1_v1_p2 = Partition.sample(d1_v1.hub_id, d1_v1.dataset_id, d1_v1.version, ["02"])
-
-    d1_p1 = PublishedVersion.sample(d1_v1.hub_id, d1_v1.dataset_id, d1_v1.version)
-    d1_p2 = PublishedVersion.sample(d1_v2.hub_id, d1_v2.dataset_id, d1_v2.version)
-
-    d2_v1 = DatasetVersion.sample(d2.hub_id, d2.id, 1, ["key"])
-
-    d2_v1_c1 = Column.sample(d2_v1.hub_id, d2_v1.dataset_id, d2_v1.version, 0)
-
-    d2_v1_p1 = Partition.sample(d2_v1.hub_id, d2_v1.dataset_id, d2_v1.version, ["aa"])
-    d2_v1_p2 = Partition.sample(d2_v1.hub_id, d2_v1.dataset_id, d2_v1.version, ["bb"])
-
-    for entry in Types:
-        write(cursor, entry)
-
-    for entry in Backends:
-        write(cursor, entry)
-
-    for entry in [h1, h2,
-                  d1, d2,
-                  d1_v1, d1_v2,
-                  d1_v1_c1, d1_v1_c2, d1_v2_c1,
-                  d1_v1_p1, d1_v1_p2,
-                  d1_p1, d1_p2,
-                  d2_v1,
-                  d2_v1_c1,
-                  d2_v1_p1, d2_v1_p2]:
-        write(cursor, entry)
-
-    conn.commit()

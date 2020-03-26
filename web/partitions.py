@@ -3,21 +3,21 @@ import datetime as dt
 import flask
 
 from core.engine import NewPartition
-from web.db import write_action
+from web.db import execute_action
 
 bp = flask.Blueprint('partitions', __name__,
-                     url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions/<int:version>')
+                     url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions/<int:version>/partitions')
 
 
 @bp.route('/new.json', methods=['POST'])
 def partition_new_json(hub_id, dataset_id, version):
-    data = flask.json()
-    partition_id = write_action(
+    data = flask.request.json
+    partition_id = execute_action(
         NewPartition(hub_id,
                      dataset_id,
                      version,
-                     data['values'],
                      data['path'],
+                     data['partition_values'],
                      data.get('row_count'),
                      data.get('start_time'),
                      data.get('end_time'))
@@ -43,7 +43,7 @@ def partition_new_html(hub_id, dataset_id, version):
             else:
                 end_time = dt.datetime.strptime(data['end_date'], '%Y-%m-%d')
 
-        write_action(
+        execute_action(
             NewPartition(hub_id,
                          dataset_id,
                          version,

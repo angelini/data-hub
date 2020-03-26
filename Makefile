@@ -1,6 +1,6 @@
 .PHONY: check-venv
 .PHONY: install-uikit install-datatables install-python-deps install
-.PHONY: reset generate engine web
+.PHONY: reset example engine web
 
 UIKIT_VERSION = "3.3.7"
 DATATABLES_VERSION = "1.10.20"
@@ -8,6 +8,11 @@ DATATABLES_VERSION = "1.10.20"
 check-venv:
 ifndef VIRTUAL_ENV
 	$(error virtualenv is not activated)
+endif
+
+check-web:
+ifneq ($(shell curl -s -I "http://localhost:5000/" | head -n 1), HTTP/1.0 302 FOUND)
+	$(error server is not running)
 endif
 
 install-uikit:
@@ -36,11 +41,14 @@ install-python-deps: check-venv
 
 install: install-uikit install-datatables install-python-deps
 
+reset: export PYTHONPATH=.
 reset:
 	psql -h localhost -U postgres -d dh -a -1 -v ON_ERROR_STOP=1 -f init.sql
+	python core/reset.py
 
-generate: reset
-	python core/data.py
+example: export PYTHONPATH=.
+example: check-web reset
+	python examples/first.py
 
 engine:
 	ipython -i core/engine.py

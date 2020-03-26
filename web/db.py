@@ -8,8 +8,12 @@ class DbException(Exception):
     pass
 
 
-def read_view(view):
-    conn = psql.connect('dbname=dh user=postgres host=localhost')
+def connect():
+    return psql.connect('dbname=dh user=postgres host=localhost')
+
+
+def fetch_view(view):
+    conn = connect()
     try:
         cursor = conn.cursor()
         return view.fetch(cursor)
@@ -17,8 +21,8 @@ def read_view(view):
         conn.close()
 
 
-def write_action(action):
-    conn = psql.connect('dbname=dh user=postgres host=localhost')
+def execute_action(action):
+    conn = connect()
     try:
         cursor = conn.cursor()
         result = action.execute(cursor)
@@ -26,5 +30,14 @@ def write_action(action):
         return result
     except psql.errors.DatabaseError as e:
         raise DbException(e.diag.message_primary)
+    finally:
+        conn.close()
+
+
+def check_assertion(assertion):
+    conn = connect()
+    try:
+        cursor = conn.cursor()
+        return assertion.check(cursor)
     finally:
         conn.close()
