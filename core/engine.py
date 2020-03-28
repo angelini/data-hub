@@ -51,33 +51,26 @@ class NewDatasetVersion(Action):
     description:    str
     is_overlapping: bool
     columns:        t.List[t.Tuple[str, str, str, bool, bool, bool]]
+    dependencies:   t.List[t.Tuple[str, str, int]]
 
     def execute(self, cursor):
-        cursor.execute('''
-            SELECT max(version)
-            FROM dataset_versions
-            WHERE
-                hub_id = %s
-            AND dataset_id = %s
-        ''', (self.hub_id, self.dataset_id))
-        latest_version = cursor.fetchone()[0] or 0
-
         write(cursor, DatasetVersion(self.hub_id,
                                      self.dataset_id,
-                                     latest_version + 1,
+                                     None,
                                      Backend.by_module(self.backend).id,
                                      self.path,
                                      self.partition_keys,
                                      self.description,
                                      self.is_overlapping,
                                      dt.datetime.now(tz=pytz.utc)))
+        version = cursor.fetchone()[0]
 
         position = 0
         for column in self.columns:
             name, type_name, description, is_nullable, is_unique, has_pii = column
             write(cursor, Column(self.hub_id,
                                  self.dataset_id,
-                                 latest_version + 1,
+                                 version,
                                  name,
                                  Type.by_name(type_name).id,
                                  position,
@@ -87,7 +80,7 @@ class NewDatasetVersion(Action):
                                  has_pii))
             position += 1
 
-        return latest_version + 1
+        return version
 
 
 @dc.dataclass

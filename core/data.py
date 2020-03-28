@@ -22,12 +22,26 @@ class Entry(abc.ABC):
         pass
 
     @property
+    def generated_columns(self):
+        return []
+
+    @property
     def columns(self):
         return [field.name for field in dc.fields(self)]
 
     @property
     def values(self):
         return [self.__getattribute__(column) for column in self.columns]
+
+    @property
+    def insert_columns(self):
+        return [column
+                for column in self.columns
+                if column not in self.generated_columns]
+
+    @property
+    def insert_values(self):
+        return [self.__getattribute__(column) for column in self.insert_columns]
 
 
 @dc.dataclass
@@ -109,6 +123,7 @@ class DatasetVersion(Entry):
     created_at:     dt.datetime
 
     table_name = 'dataset_versions'
+    generated_columns = ['version']
 
     @staticmethod
     def sample(hub_id, dataset_id, count=0, keys=None):
@@ -261,7 +276,11 @@ class Partition(Entry):
 
 
 def write(cursor, entry):
-    cursor.execute(f'INSERT INTO {entry.table_name} '
-                   f'({", ".join(entry.columns)}) '
-                   f'VALUES ({", ".join(["%s" for _ in entry.columns])})',
-                   entry.values)
+    query = (
+        f'INSERT INTO {entry.table_name} '
+        f'({", ".join(entry.insert_columns)}) '
+        f'VALUES ({", ".join(["%s" for _ in entry.insert_columns])}) '
+    )
+    if entry.generated_columns:
+        query += f'RETURNING {", ".join(entry.generated_columns)}'
+    cursor.execute(query, entry.insert_values)

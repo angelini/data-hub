@@ -32,7 +32,8 @@ def version_new_json(hub_id, dataset_id):
                           data['partition_keys'],
                           data['description'],
                           data['is_overlapping'],
-                          data['columns'])
+                          data['columns'],
+                          [])
     )
     return flask.jsonify({'version': version_id})
 
@@ -64,7 +65,8 @@ def version_new_html(hub_id, dataset_id):
                                   data.getlist('partition_key[]'),
                                   data['description'],
                                   bool(data.get('is_overlapping')),
-                                  columns)
+                                  columns,
+                                  [])
             )
             return flask.redirect(flask.url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id))
         except DbException as e:

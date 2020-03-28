@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS backends (
 CREATE TABLE IF NOT EXISTS dataset_versions (
     hub_id      uuid,
     dataset_id  uuid,
-    version     int,
+    version     int  GENERATED ALWAYS AS IDENTITY,
 
     backend_id     int         NOT NULL,
     partition_keys text[]      NOT NULL,
