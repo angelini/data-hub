@@ -9,7 +9,8 @@ import typing as t
 import psycopg2 as psql
 import pytz
 
-from core.data import Backend, Column, Dataset, DatasetVersion, Hub, Partition, PublishedVersion, Type, write
+from core.data import Backend, Column, Dataset, DatasetVersion, Dependency, Hub, \
+    Partition, PublishedVersion, Type, write
 
 
 class Action(abc.ABC):
@@ -51,6 +52,7 @@ class NewDatasetVersion(Action):
     description:    str
     is_overlapping: bool
     columns:        t.List[t.Tuple[str, str, str, bool, bool, bool]]
+    depends_on:     t.List[t.Tuple[str, str, int]]
 
     def execute(self, cursor):
         cursor.execute('''
@@ -86,6 +88,14 @@ class NewDatasetVersion(Action):
                                  is_unique,
                                  has_pii))
             position += 1
+
+        for (parent_hub_id, parent_dataset_id, parent_version) in self.depends_on:
+            write(cursor, Dependency(parent_hub_id,
+                                     parent_dataset_id,
+                                     parent_version,
+                                     self.hub_id,
+                                     self.dataset_id,
+                                     latest_version + 1))
 
         return latest_version + 1
 
@@ -260,6 +270,80 @@ class DetailVersion(View):
         } for row in cursor.fetchall()]
 
         cursor.execute('''
+            WITH RECURSIVE children AS (
+                SELECT
+                    parent_hub_id,
+                    parent_dataset_id,
+                    parent_version,
+                    child_hub_id,
+                    child_dataset_id,
+                    child_version
+                FROM dependencies
+                WHERE
+                    parent_hub_id = %s
+                AND parent_dataset_id = %s
+                AND parent_version = %s
+                UNION
+                SELECT
+                    dep.parent_hub_id,
+                    dep.parent_dataset_id,
+                    dep.parent_version,
+                    dep.child_hub_id,
+                    dep.child_dataset_id,
+                    dep.child_version
+                FROM
+                    dependencies AS dep
+                INNER JOIN
+                    children AS chi
+                ON
+                    dep.parent_hub_id = chi.child_hub_id
+                AND dep.parent_dataset_id = chi.child_dataset_id
+                AND dep.parent_version = chi.child_version
+            )
+            SELECT
+                chi.parent_hub_id,
+                phub.name AS parent_hub_name,
+                chi.parent_dataset_id,
+                pdat.name AS parent_dataset_name,
+                chi.parent_version,
+                chi.child_hub_id,
+                chub.name AS child_hub_name,
+                chi.child_dataset_id,
+                cdat.name AS child_dataset_name,
+                chi.child_version
+            FROM
+                children chi
+            INNER JOIN
+                hubs phub
+            ON
+                chi.parent_hub_id = phub.id
+            INNER JOIN
+                hubs chub
+            ON
+                chi.child_hub_id = chub.id
+            INNER JOIN
+                datasets pdat
+            ON
+                chi.parent_dataset_id = pdat.id
+            INNER JOIN
+                datasets cdat
+            ON
+                chi.child_dataset_id = cdat.id
+        ''', (self.hub_id, self.dataset_id, self.version))
+        dependencies = [{
+            'parent_hub_id': row[0],
+            'parent_hub_name': row[1],
+            'parent_dataset_id': row[2],
+            'parent_dataset_name': row[3],
+            'parent_version': row[4],
+            'child_hub_id': row[5],
+            'child_hub_name': row[6],
+            'child_dataset_id': row[7],
+            'child_dataset_name': row[8],
+            'child_version': row[9],
+        } for row in cursor.fetchall()]
+
+        cursor.execute('''
             SELECT partition_keys, module, path, description, created_at
             FROM versions_with_backend
             WHERE
@@ -282,6 +366,7 @@ class DetailVersion(View):
             },
             'columns': columns,
             'partitions': partitions,
+            'dependencies': dependencies,
         }
 
 

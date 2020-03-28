@@ -2,5 +2,7 @@
 .vscode
 __pycache__
 
+web/static/d3
+web/static/dagre
 web/static/datatables
 web/static/uikit

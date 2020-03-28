@@ -128,7 +128,7 @@
   <form class="dynamic-rows uk-form-stacked uk-container-small uk-padding uk-padding-remove-horizontal uk-padding-remove-top">
     <div class="uk-flex uk-flex-middle">
       <div>
-        <span class="uk-text-large">Dependencies</span>
+        <span class="uk-text-large">Depends On</span>
       </div>
       <div>
         <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
@@ -139,7 +139,7 @@
         <tbody>
           <tr>
             <td>
-              <select class="hub-dropdown uk-select" name="dependency_hub_id[]" form="new-version">
+              <select class="hub-dropdown uk-select" name="parent_hub_id[]" form="new-version">
                 {% for version in published.keys() %}
                 {% set id, name = version.split(':') %}
                   <option value="{{ id }}">{{ name }}</option>
@@ -147,12 +147,10 @@
               </select>
             </td>
             <td>
-              <select class="dataset-dropdown uk-select" name="dependency_dataset_id[]" form="new-version">
-              </select>
+              <select class="dataset-dropdown uk-select" name="parent_dataset_id[]" form="new-version"></select>
             </td>
             <td>
-              <select class="version-dropdown uk-select" name="dependency_version[]" form="new-version">
-              </select>
+              <select class="version-dropdown uk-select" name="parent_version[]" form="new-version"></select>
             </td>
             <td>
               <a class="remove-row uk-icon-link"><span uk-icon="trash"></span></a>

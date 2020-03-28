@@ -32,7 +32,8 @@ def version_new_json(hub_id, dataset_id):
                           data['partition_keys'],
                           data['description'],
                           data['is_overlapping'],
-                          data['columns'])
+                          data['columns'],
+                          data['depends_on'])
     )
     return flask.jsonify({'version': version_id})
 
@@ -54,6 +55,14 @@ def version_new_html(hub_id, dataset_id):
             ]
             for (idx, name) in enumerate(data.getlist('column_name[]'))
         ]
+        depends_on = [
+            [
+                hub_id,
+                data.getlist('parent_dataset_id[]')[idx],
+                int(data.getlist('parent_version[]')[idx]),
+            ]
+            for (idx, hub_id) in enumerate(data.getlist('parent_hub_id[]'))
+        ]
 
         try:
             execute_action(
@@ -64,7 +73,8 @@ def version_new_html(hub_id, dataset_id):
                                   data.getlist('partition_key[]'),
                                   data['description'],
                                   bool(data.get('is_overlapping')),
-                                  columns)
+                                  columns,
+                                  depends_on)
             )
             return flask.redirect(flask.url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id))
         except DbException as e:

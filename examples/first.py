@@ -43,11 +43,12 @@ def new_dataset(hub_id, name):
     )['dataset_id']
 
 
-def new_version(hub_id, dataset_id, backend, path, keys, description, is_overlapping, columns):
+def new_version(hub_id, dataset_id, backend, path, keys, description, is_overlapping, columns, depends_on):
     return post(
         f'hubs/{hub_id}/datasets/{dataset_id}/versions/new.json',
         {'backend': backend, 'path': path, 'partition_keys': keys,
-         'description': description, 'is_overlapping': is_overlapping, 'columns': columns}
+         'description': description, 'is_overlapping': is_overlapping,
+         'columns': columns, 'depends_on': depends_on}
     )['version']
 
 
@@ -63,7 +64,8 @@ def new_partition(hub_id, dataset_id, version, path, values, count, start, end):
     )['partition_id']
 
 
-def build_full_dataset(hub_id, dataset_name, columns, version_count=5):
+def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_on=None):
+    depends_on = depends_on or []
     dataset_id = new_dataset(hub_id, dataset_name)
 
     versions = [
@@ -71,7 +73,8 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5):
             hub_id, dataset_id,
             FileBackend.module, f'/tables/{dataset_name}/{i}', ['day', 'country'],
             '', False,
-            columns
+            columns,
+            depends_on,
         )
         for i in range(1, 6)
     ]
@@ -91,29 +94,56 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5):
                     random.randint(10, 2000), start, end
                 )
 
-    publish_version(hub_id, dataset_id,
-                    versions[random.randint(-1 * version_count, -1)])
+    published_version = versions[random.randint(-1 * version_count, -1)]
+    publish_version(hub_id, dataset_id, published_version)
+
+    return (hub_id, dataset_id, published_version)
 
 
 def main():
     marketing_hub_id = new_hub('Marketing', 'hive://local/marketing')
 
-    build_full_dataset(marketing_hub_id, 'leads', [
-        ('id', IntType.name, '', False, True, False),
-        ('email', StringType.name, '', False, True, True),
-    ])
+    visits = build_full_dataset(
+        marketing_hub_id,
+        'visits',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('email', StringType.name, '', False, True, True),
+            ('time', IntType.name, '', False, False, False),
+        ]
+    )
 
-    build_full_dataset(marketing_hub_id, 'campaigns', [
-        ('id', IntType.name, '', False, True, False),
-        ('name', StringType.name, '', False, False, False),
-        ('price', IntType.name, '', False, False, False),
-    ])
+    leads = build_full_dataset(
+        marketing_hub_id,
+        'leads',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('email', StringType.name, '', False, True, True),
+        ],
+        depends_on=[visits]
+    )
 
-    build_full_dataset(marketing_hub_id, 'conversions', [
-        ('id', IntType.name, '', False, True, False),
-        ('lead_id', IntType.name, '', False, False, False),
-        ('customer_id', IntType.name, '', False, False, False),
-    ])
+    campaigns = build_full_dataset(
+        marketing_hub_id,
+        'campaigns',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('name', StringType.name, '', False, False, False),
+            ('price', IntType.name, '', False, False, False),
+        ],
+        depends_on=[leads]
+    )
+
+    build_full_dataset(
+        marketing_hub_id,
+        'conversions',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('lead_id', IntType.name, '', False, False, False),
+            ('customer_id', IntType.name, '', False, False, False),
+        ],
+        depends_on=[leads, campaigns]
+    )
 
     sales_hub_id = new_hub('Sales', 'hive://local/sales')
 

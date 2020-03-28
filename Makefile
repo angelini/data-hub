@@ -1,9 +1,11 @@
 .PHONY: check-venv
-.PHONY: install-uikit install-datatables install-python-deps install
+.PHONY: install-uikit install-datatables install-d3 install-dagre install-python-deps install
 .PHONY: reset example engine web
 
 UIKIT_VERSION = "3.3.7"
 DATATABLES_VERSION = "1.10.20"
+D3_VERSION = "5.15.0"
+DAGRE_VERSION = "0.5.0"
 
 check-venv:
 ifndef VIRTUAL_ENV
@@ -36,10 +38,26 @@ install-datatables:
 	rm -r "DataTables-${DATATABLES_VERSION}"
 	rm datatables.tar.gz
 
+install-d3:
+	curl -s -L -o d3.zip "https://github.com/d3/d3/releases/download/v${D3_VERSION}/d3.zip"
+	unzip d3.zip -d "d3-${D3_VERSION}"
+	mkdir -p web/static/d3/
+	mv "d3-${D3_VERSION}/d3.js" web/static/d3/
+	rm -r "d3-${D3_VERSION}"
+	rm d3.zip
+
+install-dagre:
+	curl -s -L -o dagre.tar.gz "https://github.com/dagrejs/dagre-d3/archive/v${DAGRE_VERSION}.tar.gz"
+	tar xzf dagre.tar.gz
+	mkdir -p web/static/dagre/
+	mv "dagre-d3-${DAGRE_VERSION}/dist/dagre-d3.js" web/static/dagre/
+	rm -r "dagre-d3-${DAGRE_VERSION}"
+	rm dagre.tar.gz
+
 install-python-deps: check-venv
 	pip install -r requirements.txt
 
-install: install-uikit install-datatables install-python-deps
+install: install-uikit install-datatables install-d3 install-dagre install-python-deps
 
 reset: export PYTHONPATH=.
 reset:
