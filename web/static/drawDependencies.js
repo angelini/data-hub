@@ -1,12 +1,12 @@
-function parentKey(dep) {
-    return `${dep.parent_hub_id}:${dep.parent_dataset_id}:${dep.parent_version}`;
+function label(node) {
+    if (node.is_same_hub) {
+        return `${node.dataset_name} - ${node.version}`
+    } else {
+        return `${node.hub_name} - ${node.dataset_name} - ${node.version}`
+    }
 }
 
-function childKey(dep) {
-    return `${dep.child_hub_id}:${dep.child_dataset_id}:${dep.child_version}`;
-}
-
-function drawDependencies(container, dependencies) {
+function drawDependencies(container, dependencies, version) {
     let g = new dagreD3.graphlib.Graph();
 
     g.setGraph({});
@@ -14,21 +14,21 @@ function drawDependencies(container, dependencies) {
 
     let nodes = new Set();
     dependencies.forEach(dep => {
-        let parent = parentKey(dep);
-        if (!nodes.has(parent)) {
-            g.setNode(parent, {label: `${dep.parent_hub_name}:${dep.parent_dataset_name}:${dep.parent_version}`});
-            nodes.add(parent);
+        if (!nodes.has(dep.parent.key)) {
+            let style = dep.parent.is_selected ? 'fill: #afa' : '';
+            g.setNode(dep.parent.key, {label: label(dep.parent), style: style});
+            nodes.add(dep.parent.key);
         }
-        let child = childKey(dep);
-        if (!nodes.has(child)) {
-            g.setNode(child, {label: `${dep.child_hub_name}:${dep.child_dataset_name}:${dep.child_version}`});
-            nodes.add(child);
+
+        if (!nodes.has(dep.child.key)) {
+            let style = dep.child.is_selected ? 'fill: #afa' : '';
+            g.setNode(dep.child.key, {label: label(dep.child), style: style});
+            nodes.add(dep.child.key);
         }
     });
 
     dependencies.forEach(dep => {
-        g.setEdge(`${dep.parent_hub_id}:${dep.parent_dataset_id}:${dep.parent_version}`,
-                  `${dep.child_hub_id}:${dep.child_dataset_id}:${dep.child_version}`);
+        g.setEdge(dep.parent.key, dep.child.key);
     });
 
     let render = new dagreD3.render();
@@ -42,5 +42,5 @@ document.addEventListener('DOMContentLoaded', () => {
         inner.attr('transform', d3.event.transform);
     });
     svg.call(zoom);
-    drawDependencies(inner, versionDependencies);
+    drawDependencies(inner, versionDependencies, selectedVersion);
 });

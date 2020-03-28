@@ -331,17 +331,111 @@ class DetailVersion(View):
                 chi.child_dataset_id = cdat.id
         ''', (self.hub_id, self.dataset_id, self.version))
         dependencies = [{
-            'parent_hub_id': row[0],
-            'parent_hub_name': row[1],
-            'parent_dataset_id': row[2],
-            'parent_dataset_name': row[3],
-            'parent_version': row[4],
-            'child_hub_id': row[5],
-            'child_hub_name': row[6],
-            'child_dataset_id': row[7],
-            'child_dataset_name': row[8],
-            'child_version': row[9],
+            'parent': {
+                'hub_id': row[0],
+                'hub_name': row[1],
+                'dataset_id': row[2],
+                'dataset_name': row[3],
+                'version': row[4],
+                'key': f'{row[0]}:{row[2]}:{row[4]}',
+                'is_same_hub': row[0] == self.hub_id,
+                'is_selected': row[0] == self.hub_id and row[2] == self.dataset_id and row[4] == self.version,
+            },
+            'child': {
+                'hub_id': row[5],
+                'hub_name': row[6],
+                'dataset_id': row[7],
+                'dataset_name': row[8],
+                'version': row[9],
+                'key': f'{row[5]}:{row[7]}:{row[9]}',
+                'is_same_hub': row[5] == self.hub_id,
+                'is_selected': row[5] == self.hub_id and row[7] == self.dataset_id and row[9] == self.version,
+            }
         } for row in cursor.fetchall()]
+
+        cursor.execute('''
+            WITH RECURSIVE parents AS (
+                SELECT
+                    parent_hub_id,
+                    parent_dataset_id,
+                    parent_version,
+                    child_hub_id,
+                    child_dataset_id,
+                    child_version
+                FROM dependencies
+                WHERE
+                    child_hub_id = %s
+                AND child_dataset_id = %s
+                AND child_version = %s
+                UNION
+                SELECT
+                    dep.parent_hub_id,
+                    dep.parent_dataset_id,
+                    dep.parent_version,
+                    dep.child_hub_id,
+                    dep.child_dataset_id,
+                    dep.child_version
+                FROM
+                    dependencies AS dep
+                INNER JOIN
+                    parents AS par
+                ON
+                    dep.child_hub_id = par.parent_hub_id
+                AND dep.child_dataset_id = par.parent_dataset_id
+                AND dep.child_version = par.parent_version
+            )
+            SELECT
+                par.parent_hub_id,
+                phub.name AS parent_hub_name,
+                par.parent_dataset_id,
+                pdat.name AS parent_dataset_name,
+                par.parent_version,
+                par.child_hub_id,
+                chub.name AS child_hub_name,
+                par.child_dataset_id,
+                cdat.name AS child_dataset_name,
+                par.child_version
+            FROM
+                parents par
+            INNER JOIN
+                hubs phub
+            ON
+                par.parent_hub_id = phub.id
+            INNER JOIN
+                hubs chub
+            ON
+                par.child_hub_id = chub.id
+            INNER JOIN
+                datasets pdat
+            ON
+                par.parent_dataset_id = pdat.id
+            INNER JOIN
+                datasets cdat
+            ON
+                par.child_dataset_id = cdat.id
+        ''', (self.hub_id, self.dataset_id, self.version))
+        dependencies.extend([{
+            'parent': {
+                'hub_id': row[0],
+                'hub_name': row[1],
+                'dataset_id': row[2],
+                'dataset_name': row[3],
+                'version': row[4],
+                'key': f'{row[0]}:{row[2]}:{row[4]}',
+                'is_same_hub': row[0] == self.hub_id,
+                'is_selected': row[0] == self.hub_id and row[2] == self.dataset_id and row[4] == self.version,
+            },
+            'child': {
+                'hub_id': row[5],
+                'hub_name': row[6],
+                'dataset_id': row[7],
+                'dataset_name': row[8],
+                'version': row[9],
+                'key': f'{row[5]}:{row[7]}:{row[9]}',
+                'is_same_hub': row[5] == self.hub_id,
+                'is_selected': row[5] == self.hub_id and row[7] == self.dataset_id and row[9] == self.version,
+            }
+        } for row in cursor.fetchall()])
 
         cursor.execute('''
             SELECT partition_keys, module, path, description, created_at
