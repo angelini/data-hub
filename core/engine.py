@@ -203,12 +203,27 @@ class ListVersions(View):
 
     def fetch(self, cursor):
         cursor.execute('''
-            SELECT version, module, path, description, created_at
-            FROM versions_with_backend
+            SELECT
+                ver.version,
+                ver.module,
+                ver.path,
+                ver.description,
+                ver.created_at,
+                CASE WHEN cur.published_at IS NULL THEN false
+                     ELSE true
+                     END AS published
+            FROM
+                versions_with_backend ver
+            LEFT JOIN
+                current_published_versions cur
+            ON
+                ver.hub_id = cur.hub_id
+            AND ver.dataset_id = cur.dataset_id
+            AND ver.version = cur.version
             WHERE
-                hub_id = %s
-            AND dataset_id = %s
-            ORDER BY created_at
+                ver.hub_id = %s
+            AND ver.dataset_id = %s
+            ORDER BY ver.created_at
         ''', (self.hub_id, self.dataset_id))
         return {
             'versions': [
@@ -220,6 +235,7 @@ class ListVersions(View):
                     'path': row[2],
                     'description': row[3],
                     'created_at': row[4],
+                    'published': row[5],
                 }
                 for row in cursor.fetchall()
             ]

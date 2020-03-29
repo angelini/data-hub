@@ -112,3 +112,10 @@ def version_publish_json(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))
     return flask.jsonify({})
+
+
+@bp.route('/<int:version>/publish.html', methods=['POST'])
+def version_publish_html(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
+    execute_action(PublishVersion(hub_id, dataset_id, version))
+    return flask.redirect(flask.url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id))
