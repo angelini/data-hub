@@ -1,8 +1,8 @@
 import flask
 
 from core.data import Backends, Types
-from core.engine import DetailVersion, ListVersions, NewDatasetVersion, PublishedVersions, PublishVersion
-from web.db import DbException, fetch_view, execute_action
+from core.engine import DetailVersion, ListVersions, NewDatasetVersion, PublishedVersions, PublishVersion, VersionExists
+from web.db import DbException, check_assertion, fetch_view, execute_action
 
 bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions')
 
@@ -92,11 +92,13 @@ def version_new_html(hub_id, dataset_id):
 
 @bp.route('/<int:version>/detail.json', methods=['GET'])
 def version_detail_json(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
     return flask.jsonify(fetch_view(DetailVersion(hub_id, dataset_id, version)))
 
 
 @bp.route('/<int:version>/detail.html', methods=['GET'])
 def version_detail_html(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
     details = fetch_view(DetailVersion(hub_id, dataset_id, version))
     return flask.render_template('versions/detail.html.j2',
                                  hub_id=hub_id,
@@ -107,5 +109,6 @@ def version_detail_html(hub_id, dataset_id, version):
 
 @bp.route('/<int:version>/publish.json', methods=['POST'])
 def version_publish_json(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))
     return flask.jsonify({})

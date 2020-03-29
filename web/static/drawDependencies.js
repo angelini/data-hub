@@ -6,7 +6,7 @@ function label(node) {
     }
 }
 
-function drawDependencies(container, dependencies, version) {
+function drawDependencies(container, dependencies) {
     let g = new dagreD3.graphlib.Graph();
 
     g.setGraph({});
@@ -42,5 +42,5 @@ document.addEventListener('DOMContentLoaded', () => {
         inner.attr('transform', d3.event.transform);
     });
     svg.call(zoom);
-    drawDependencies(inner, versionDependencies, selectedVersion);
+    drawDependencies(inner, versionDependencies);
 });

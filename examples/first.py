@@ -8,6 +8,7 @@ from core.data import FileBackend, IntType, StringType
 
 
 class DateTimeEncoder(json.JSONEncoder):
+
     def default(self, o):
         if isinstance(o, dt.datetime):
             return o.isoformat()

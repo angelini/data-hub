@@ -13,10 +13,6 @@ import pytz
 class Entry(abc.ABC):
     table_name: str
 
-    @abc.abstractproperty
-    def table_name():
-        pass
-
     @abc.abstractstaticmethod
     def sample():
         pass

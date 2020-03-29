@@ -481,9 +481,14 @@ class PublishedVersions(View):
 
 
 class Assertion(abc.ABC):
+    status_code: int
 
     @abc.abstractmethod
     def check(self, cursor):
+        pass
+
+    @abc.abstractmethod
+    def message(self):
         pass
 
 
@@ -492,6 +497,8 @@ class NoOverlappingPartitions(Assertion):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
     version:    int
+
+    status_code = 400
 
     def check(self, cursor):
         cursor.execute('''
@@ -519,12 +526,17 @@ class NoOverlappingPartitions(Assertion):
         ''', (self.hub_id, self.dataset_id, self.version))
         return cursor.rowcount == 0
 
+    def message(self):
+        return f'{self.hub_id}::{self.dataset_id}::{self.version} contains overlapping partitions'
+
 
 @dc.dataclass
 class VersionExists(Assertion):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
     version:    int
+
+    status_code = 404
 
     def check(self, cursor):
         cursor.execute('''
@@ -536,14 +548,21 @@ class VersionExists(Assertion):
                 hub_id = %s
             AND dataset_id = %s
             AND version = %s
-        ''')
+        ''', (self.hub_id, self.dataset_id, self.version))
         return cursor.rowcount == 1
+
+    def message(self):
+        return f'{self.hub_id}::{self.dataset_id}::{self.version} does not exist'
 
 
 @dc.dataclass
 class NoDependencyLoops(Assertion):
+    status_code = 404
 
     def check(self, cursor):
+        pass
+
+    def message(self):
         pass
 
 

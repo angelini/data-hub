@@ -2,8 +2,8 @@ import datetime as dt
 
 import flask
 
-from core.engine import NewPartition
-from web.db import execute_action
+from core.engine import NewPartition, VersionExists
+from web.db import check_assertion, execute_action
 
 bp = flask.Blueprint('partitions', __name__,
                      url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions/<int:version>/partitions')
@@ -11,6 +11,7 @@ bp = flask.Blueprint('partitions', __name__,
 
 @bp.route('/new.json', methods=['POST'])
 def partition_new_json(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
     data = flask.request.json
     partition_id = execute_action(
         NewPartition(hub_id,
@@ -27,6 +28,7 @@ def partition_new_json(hub_id, dataset_id, version):
 
 @bp.route('/new.html', methods=['GET', 'POST'])
 def partition_new_html(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
     if flask.request.method == 'POST':
         data = flask.request.form
         start_time, end_time = None, None

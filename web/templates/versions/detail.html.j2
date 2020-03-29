@@ -156,7 +156,6 @@
 
 {% block scripts %}
   <script type="text/javascript">
-    const selectedVersion = {{ {'hubId': hub_id, 'datasetId': dataset_id, 'version': version} | tojson | safe }};
     const versionDependencies = {{ dependencies | tojson | safe }};
   </script>
   <script src="{{ url_for('static', filename='topRowInput.js') }}"></script>
