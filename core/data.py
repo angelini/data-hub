@@ -1,21 +1,21 @@
 import abc
 import dataclasses as dc
 import datetime as dt
+import enum
 import pathlib as pl
-import random
 import typing as t
 import uuid
 
-import faker
-import pytz
+
+class AccessLevel(enum.Enum):
+    NONE = 'none'
+    READ = 'read'
+    WRITE = 'write'
+    ADMIN = 'admin'
 
 
 class Entry(abc.ABC):
     table_name: str
-
-    @abc.abstractstaticmethod
-    def sample():
-        pass
 
     @property
     def columns(self):
@@ -23,26 +23,69 @@ class Entry(abc.ABC):
 
     @property
     def values(self):
-        return [self.__getattribute__(column) for column in self.columns]
+        def get_value(column):
+            value = self.__getattribute__(column)
+            if isinstance(value, enum.Enum):
+                return value.value
+            return value
+
+        return [get_value(column) for column in self.columns]
+
+
+@dc.dataclass
+class User(Entry):
+    id: uuid.UUID
+
+    email:         str
+    password_hash: str
+    created_at:    dt.datetime
+
+    table_name = 'users'
+
+
+@dc.dataclass
+class Team(Entry):
+    id: uuid.UUID
+
+    name:       str
+    created_at: dt.datetime
+
+    table_name = 'teams'
+
+
+@dc.dataclass
+class TeamMember(Entry):
+    id: uuid.UUID
+
+    team_id:    uuid.UUID
+    user_id:    uuid.UUID
+    created_at: dt.datetime
+    deleted_at: t.Optional[dt.datetime]
+
+    table_name = 'team_members'
 
 
 @dc.dataclass
 class Hub(Entry):
-    id:         uuid.UUID
+    id: uuid.UUID
 
+    team_id:    uuid.UUID
     name:       str
-    hive_host:  pl.Path
     created_at: dt.datetime
 
     table_name = 'hubs'
 
-    @staticmethod
-    def sample():
-        fake = faker.Faker()
-        return Hub(uuid.uuid4(),
-                   fake.simple_profile()['username'],
-                   fake.unix_device(),
-                   dt.datetime.now(tz=pytz.utc))
+
+@dc.dataclass
+class TeamRole(Entry):
+    id: uuid.UUID
+
+    team_id:      uuid.UUID
+    hub_id:       uuid.UUID
+    access_level: AccessLevel
+    created_at:   dt.datetime
+
+    table_name = 'team_roles'
 
 
 @dc.dataclass
@@ -50,16 +93,11 @@ class Dataset(Entry):
     hub_id: uuid.UUID
     id:     uuid.UUID
 
-    name: str
+    name:       str
     created_at: dt.datetime
     deleted_at: t.Optional[dt.datetime]
 
     table_name = 'datasets'
-
-    @staticmethod
-    def sample(hub_id):
-        fake = faker.Faker()
-        return Dataset(hub_id, uuid.uuid4(), fake.name(), dt.datetime.now(tz=pytz.utc), None)
 
 
 @dc.dataclass
@@ -69,10 +107,6 @@ class Backend(Entry):
     module: str
 
     table_name = 'backends'
-
-    @staticmethod
-    def sample():
-        return random.choice(Backends)
 
     @staticmethod
     def by_module(module):
@@ -106,19 +140,6 @@ class DatasetVersion(Entry):
 
     table_name = 'dataset_versions'
 
-    @staticmethod
-    def sample(hub_id, dataset_id, count=0, keys=None):
-        fake = faker.Faker()
-        return DatasetVersion(hub_id,
-                              dataset_id,
-                              count,
-                              Backend.sample().id,
-                              fake.file_path(),
-                              keys or [],
-                              "",
-                              True,
-                              dt.datetime.now(tz=pytz.utc))
-
 
 @dc.dataclass
 class Dependency(Entry):
@@ -131,16 +152,6 @@ class Dependency(Entry):
 
     table_name = 'dependencies'
 
-    @staticmethod
-    def sample(parent_hub_id, parent_dataset_id, parent_version,
-               child_hub_id, child_dataset_id, child_version):
-        return Dependency(parent_hub_id,
-                          parent_dataset_id,
-                          parent_version,
-                          child_hub_id,
-                          child_dataset_id,
-                          child_version)
-
 
 @dc.dataclass
 class PublishedVersion(Entry):
@@ -152,23 +163,14 @@ class PublishedVersion(Entry):
 
     table_name = 'published_versions'
 
-    @staticmethod
-    def sample(hub_id, dataset_id, version):
-        return PublishedVersion(hub_id, dataset_id, version, dt.datetime.now(tz=pytz.utc))
-
 
 @dc.dataclass
 class Type(Entry):
     id: int
 
     name:      str
-    hive_type: str
 
     table_name = 'types'
-
-    @staticmethod
-    def sample():
-        return random.choice(Types)
 
     @staticmethod
     def by_name(name):
@@ -178,9 +180,9 @@ class Type(Entry):
         raise ValueError(f'Unknown type: {name}')
 
 
-IntType = Type(1, 'int', 'int')
-DoubleType = Type(2, 'double', 'double')
-StringType = Type(3, 'string', 'string')
+IntType = Type(1, 'int')
+DoubleType = Type(2, 'double')
+StringType = Type(3, 'string')
 
 Types = [
     IntType,
@@ -205,28 +207,14 @@ class Column(Entry):
 
     table_name = 'columns'
 
-    @staticmethod
-    def sample(hub_id, dataset_id, version, position=0):
-        fake = faker.Faker()
-        return Column(hub_id,
-                      dataset_id,
-                      version,
-                      fake.simple_profile()['username'],
-                      Type.sample().id,
-                      position,
-                      fake.sentence(nb_words=6, variable_nb_words=True),
-                      True,
-                      False,
-                      False)
-
 
 @dc.dataclass
 class Partition(Entry):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
     id:         uuid.UUID
 
+    hub_id:           uuid.UUID
+    dataset_id:       uuid.UUID
+    version:          int
     path:             pl.Path
     partition_values: t.List[str]
     row_count:        t.Optional[int]
@@ -236,24 +224,6 @@ class Partition(Entry):
     deleted_at:       t.Optional[dt.datetime]
 
     table_name = 'partitions'
-
-    @staticmethod
-    def sample(hub_id, dataset_id, version, values):
-        end = dt.datetime.now(tz=pytz.UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-        start = end - dt.timedelta(days=random.randint(1, 4))
-
-        fake = faker.Faker()
-        return Partition(hub_id,
-                         dataset_id,
-                         version,
-                         uuid.uuid4(),
-                         values,
-                         fake.file_path(),
-                         random.randint(100, 2000),
-                         start,
-                         end,
-                         dt.datetime.now(tz=pytz.UTC),
-                         None)
 
 
 def write(cursor, entry):

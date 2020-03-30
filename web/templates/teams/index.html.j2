@@ -1,0 +1,30 @@
+{% extends 'base.html.j2' %}
+
+{% block nav %}
+  <li class="uk-active"><a href="{{ url_for('teams.teams_index_html') }}">Teams</a></li>
+{% endblock %}
+
+{% block buttons %}
+  <a class="uk-button uk-button-primary" href="{{ url_for('teams.team_new_html') }}">Add Team</a>
+{% endblock %}
+
+{% block content %}
+  <table class="data-table uk-table uk-table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for team in teams %}
+        <tr>
+          <td>
+            <a href="{{ url_for('teams.team_detail_html', team_id=team.id) }}">{{ team.name }}</a>
+          </td>
+          <td>{{ team.created_at | datetime }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

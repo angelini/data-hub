@@ -26,14 +26,23 @@ def post(path, data):
     response = requests.post(f'http://{HOST}:{PORT}{path}',
                              data=json.dumps(data, cls=DateTimeEncoder),
                              headers={'Content-type': 'application/json'})
+    if response.status_code >= 400:
+        print(response.text)
     response.raise_for_status()
     return response.json()
 
 
-def new_hub(name, hive_host):
+def new_team(name):
+    return post(
+        'teams/new.json',
+        {'name': name}
+    )['team_id']
+
+
+def new_hub(name, team_id):
     return post(
         'hubs/new.json',
-        {'name': name, 'hive_host': hive_host}
+        {'name': name, 'team_id': team_id}
     )['hub_id']
 
 
@@ -102,7 +111,9 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
 
 
 def main():
-    marketing_hub_id = new_hub('Marketing', 'hive://local/marketing')
+    team_id = new_team('Everyone')
+
+    marketing_hub_id = new_hub('Marketing', team_id)
 
     visits = build_full_dataset(
         marketing_hub_id,
@@ -146,7 +157,7 @@ def main():
         depends_on=[leads, campaigns]
     )
 
-    sales_hub_id = new_hub('Sales', 'hive://local/sales')
+    sales_hub_id = new_hub('Sales', team_id)
 
     build_full_dataset(sales_hub_id, 'customers', [
         ('id', IntType.name, '', False, True, False),
@@ -161,7 +172,7 @@ def main():
         ('time', IntType.name, '', False, False, False),
     ])
 
-    finance_hub_id = new_hub('Finance', 'hive://local/finance')
+    finance_hub_id = new_hub('Finance', team_id)
 
     build_full_dataset(finance_hub_id, 'expenses', [
         ('id', IntType.name, '', False, True, False),

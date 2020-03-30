@@ -57,7 +57,7 @@ install-dagre:
 install-python-deps: check-venv
 	pip install -r requirements.txt
 
-install: install-uikit install-datatables install-d3 install-dagre install-python-deps
+install: check-venv install-uikit install-datatables install-d3 install-dagre install-python-deps
 
 reset: export PYTHONPATH=.
 reset:

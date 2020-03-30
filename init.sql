@@ -1,44 +1,95 @@
 /*
 
 https://app.sqldbm.com/PostgreSQL/Edit/p101568/
-https://api.elephantsql.com/console/2ff47245-6a07-4ada-a1a2-6adf3f700b23/details
 
 */
 
+DROP TABLE IF EXISTS users              CASCADE;
+DROP TABLE IF EXISTS teams              CASCADE;
+DROP TABLE IF EXISTS team_members       CASCADE;
 DROP TABLE IF EXISTS hubs               CASCADE;
+DROP TABLE IF EXISTS team_roles         CASCADE;
 DROP TABLE IF EXISTS datasets           CASCADE;
-DROP TABLE IF EXISTS columns            CASCADE;
-DROP TABLE IF EXISTS types              CASCADE;
 DROP TABLE IF EXISTS backends           CASCADE;
 DROP TABLE IF EXISTS dataset_versions   CASCADE;
+DROP TABLE IF EXISTS columns            CASCADE;
+DROP TABLE IF EXISTS types              CASCADE;
 DROP TABLE IF EXISTS dependencies       CASCADE;
 DROP TABLE IF EXISTS published_versions CASCADE;
 DROP TABLE IF EXISTS partitions         CASCADE;
+DROP TABLE IF EXISTS connectors         CASCADE;
+DROP TABLE IF EXISTS connections        CASCADE;
 
-DROP TABLE IF EXISTS users        CASCADE;
-DROP TABLE IF EXISTS roles        CASCADE;
-DROP TABLE IF EXISTS user_roles   CASCADE;
-DROP TABLE IF EXISTS admin_access CASCADE;
-DROP TABLE IF EXISTS read_access  CASCADE;
-DROP TABLE IF EXISTS write_access CASCADE;
+DROP TYPE IF EXISTS access_level CASCADE;
 
-DROP INDEX IF EXISTS partitions_values_idx;
-DROP INDEX IF EXISTS child_dependencies_idx;
+CREATE TABLE IF NOT EXISTS users (
+    id uuid,
 
-CREATE TABLE IF NOT EXISTS hubs (
-    id         uuid,
+    email         text        NOT NULL,
+    password_hash text        NOT NULL,
+    created_at    timestamptz NOT NULL,
 
-    name       text        UNIQUE NOT NULL,
-    hive_host  text,
-    created_at timestamptz,
-
-    PRIMARY KEY(id),
-    CONSTRAINT name_length CHECK (char_length(name) > 2)
+    PRIMARY KEY (id)
 );
 
+CREATE TABLE IF NOT EXISTS teams (
+    id uuid,
+
+    name       text        NOT NULL UNIQUE,
+    created_at timestamptz NOT NULL,
+
+    PRIMARY KEY (id),
+    CONSTRAINT name_length CHECK (char_length(name) >= 2 AND char_length(name) < 1028)
+);
+
+CREATE TABLE IF NOT EXISTS team_members (
+    id uuid,
+
+    team_id    uuid        NOT NULL,
+    user_id    uuid        NOT NULL,
+    created_at timestamptz NOT NULL,
+    deleted_at timestamptz,
+
+    PRIMARY KEY (id),
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT deleted_at_greater CHECK (deleted_at IS NULL OR deleted_at > created_at)
+);
+
+CREATE INDEX team_members_team_user_idx ON team_members(team_id, user_id);
+
+CREATE TABLE IF NOT EXISTS hubs (
+    id uuid,
+
+    team_id    uuid        NOT NULL,
+    name       text        NOT NULL UNIQUE,
+    created_at timestamptz NOT NULL,
+
+    PRIMARY KEY(id),
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    CONSTRAINT name_length CHECK (char_length(name) >= 2 AND char_length(name) < 1028)
+);
+
+CREATE TYPE access_level AS ENUM ('none', 'reader', 'writer', 'admin');
+
+CREATE TABLE IF NOT EXISTS team_roles (
+    id uuid,
+
+    team_id      uuid         NOT NULL,
+    hub_id       uuid         NOT NULL,
+    access_level access_level NOT NULL,
+    created_at   timestamptz  NOT NULL,
+
+    PRIMARY KEY (id),
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    FOREIGN KEY (hub_id) REFERENCES hubs(id)
+);
+
+CREATE INDEX team_roles_team_hub_idx ON team_roles(team_id, hub_id);
+
 CREATE TABLE IF NOT EXISTS datasets (
-    hub_id     uuid,
-    id         uuid,
+    hub_id uuid,
+    id     uuid,
 
     name       text        NOT NULL,
     created_at timestamptz NOT NULL,
@@ -46,7 +97,8 @@ CREATE TABLE IF NOT EXISTS datasets (
 
     PRIMARY KEY (hub_id, id),
     FOREIGN KEY (hub_id) REFERENCES hubs(id),
-    CONSTRAINT name_length CHECK (char_length(name) > 2)
+    CONSTRAINT name_length CHECK (char_length(name) >= 2 AND char_length(name) < 1028),
+    CONSTRAINT deleted_at_greater CHECK (deleted_at IS NULL OR deleted_at > created_at)
 );
 
 CREATE TABLE IF NOT EXISTS backends (
@@ -72,7 +124,8 @@ CREATE TABLE IF NOT EXISTS dataset_versions (
 
     PRIMARY KEY (hub_id, dataset_id, version),
     FOREIGN KEY (hub_id, dataset_id) REFERENCES datasets(hub_id, id),
-    FOREIGN KEY (backend_id) REFERENCES backends(id)
+    FOREIGN KEY (backend_id) REFERENCES backends(id),
+    CONSTRAINT positive_version CHECK (version >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS dependencies (
@@ -85,18 +138,19 @@ CREATE TABLE IF NOT EXISTS dependencies (
 
     PRIMARY KEY (parent_hub_id, parent_dataset_id, parent_version, child_hub_id, child_dataset_id, child_version),
     FOREIGN KEY (parent_hub_id, parent_dataset_id, parent_version) REFERENCES dataset_versions(hub_id, dataset_id, version),
-    FOREIGN KEY (child_hub_id, child_dataset_id, child_version) REFERENCES dataset_versions(hub_id, dataset_id, version)
+    FOREIGN KEY (child_hub_id, child_dataset_id, child_version) REFERENCES dataset_versions(hub_id, dataset_id, version),
+    CONSTRAINT different_versions CHECK (parent_hub_id != child_hub_id OR parent_dataset_id != child_hub_id OR parent_version != child_version)
 );
 
 CREATE INDEX child_dependencies_idx ON dependencies(child_hub_id, child_dataset_id, child_version);
 
 CREATE TABLE IF NOT EXISTS types (
-    id        int,
+    id int,
 
-    name      text NOT NULL,
-    hive_type text NOT NULL,
+    name text NOT NULL,
 
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CONSTRAINT name_length CHECK (char_length(name) >= 2 AND char_length(name) < 1028)
 );
 
 CREATE TABLE IF NOT EXISTS columns (
@@ -114,26 +168,28 @@ CREATE TABLE IF NOT EXISTS columns (
 
     PRIMARY KEY (hub_id, dataset_id, version, name),
     FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version),
-    FOREIGN KEY (type_id) REFERENCES types(id)
+    FOREIGN KEY (type_id) REFERENCES types(id),
+    CONSTRAINT name_length CHECK (char_length(name) >= 1 AND char_length(name) < 1028),
+    CONSTRAINT positive_position CHECK (position >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS published_versions (
-    hub_id       uuid,
-    dataset_id   uuid,
-    version      int,
+    hub_id     uuid,
+    dataset_id uuid,
+    version    int,
 
-    published_at timestamptz,
+    published_at timestamptz NOT NULL,
 
     PRIMARY KEY (hub_id, dataset_id, version),
     FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version)
 );
 
 CREATE TABLE IF NOT EXISTS partitions (
-    hub_id            uuid,
-    dataset_id        uuid,
-    version           int,
-    id                uuid,
+    id uuid,
 
+    hub_id           uuid,
+    dataset_id       uuid,
+    version          int,
     partition_values text[],
     path             text        NOT NULL,
     row_count        int,
@@ -142,80 +198,111 @@ CREATE TABLE IF NOT EXISTS partitions (
     created_at       timestamptz NOT NULL,
     deleted_at       timestamptz,
 
-    PRIMARY KEY (hub_id, dataset_id, version, id),
-    FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version)
+    PRIMARY KEY (id),
+    FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version),
+    CONSTRAINT positive_count CHECK (row_count >= 0),
+    CONSTRAINT end_time_greater CHECK (start_time IS NULL OR end_time IS NULL OR end_time > start_time),
+    CONSTRAINT deleted_at_greater CHECK (deleted_at IS NULL OR deleted_at > created_at)
 );
 
 CREATE INDEX partitions_values_idx ON partitions USING gin(partition_values);
+CREATE INDEX version_partitions_idx ON partitions(hub_id, dataset_id, version);
 
-CREATE TABLE IF NOT EXISTS users (
-    id    uuid,
+CREATE TABLE IF NOT EXISTS connectors (
+    id uuid,
 
-    email text NOT NULL,
+    module text  NOT NULL,
+    config jsonb,
 
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CONSTRAINT valid_python_module CHECK (module ~ '^[A-Za-z_][A-Za-z0-9_.]*')
 );
 
-CREATE TABLE IF NOT EXISTS roles (
-    id    uuid,
+CREATE TABLE IF NOT EXISTS connections (
+    id uuid,
 
-    name text NOT NULL,
+    hub_id       uuid        NOT NULL,
+    dataset_id   uuid        NOT NULL,
+    version      int         NOT NULL,
+    connector_id uuid        NOT NULL,
+    path         text        NOT NULL,
+    created_at   timestamptz NOT NULL,
 
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version),
+    FOREIGN KEY (connector_id) REFERENCES connectors(id)
 );
 
-CREATE TABLE IF NOT EXISTS user_roles (
-    user_id    uuid,
-    role_id    uuid,
+CREATE OR REPLACE VIEW current_team_members_with_email AS
+    WITH ranked AS (
+        SELECT
+            team_id,
+            user_id,
+            created_at,
+            ROW_NUMBER()
+            OVER (
+                PARTITION BY team_id, user_id
+                ORDER BY created_at DESC
+            ) idx
+        FROM team_members
+        WHERE deleted_at IS NULL
+    )
+    SELECT
+        ran.team_id,
+        ran.user_id,
+        usr.email AS user_email,
+        ran.created_at
+    FROM
+        ranked ran
+    INNER JOIN
+        users AS usr
+    ON
+        ran.user_id = usr.id
+    WHERE
+        ran.idx = 1;
 
-    created_at timestamptz NOT NULL,
-    deleted_at timestamptz,
+CREATE OR REPLACE VIEW hubs_with_team_name AS
+    SELECT
+        hub.id,
+        hub.name,
+        hub.team_id,
+        tea.name AS team_name,
+        hub.created_at
+    FROM
+        hubs hub
+    INNER JOIN
+        teams tea
+    ON
+        hub.team_id = tea.id;
 
-    PRIMARY KEY (user_id, role_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (role_id) REFERENCES roles(id)
-);
-
-CREATE TABLE IF NOT EXISTS admin_access (
-    role_id    uuid,
-    hub_id     uuid,
-    id         uuid,
-
-    created_at timestamptz NOT NULL,
-    revoked_at timestamptz,
-
-    PRIMARY KEY (role_id, hub_id, id),
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-    FOREIGN KEY (hub_id) REFERENCES hubs(id)
-);
-
-CREATE TABLE IF NOT EXISTS read_access (
-    role_id    uuid,
-    hub_id     uuid,
-    dataset_id uuid,
-    id         uuid,
-
-    created_at timestamptz NOT NULL,
-    revoked_at timestamptz,
-
-    PRIMARY KEY (role_id, hub_id, id),
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-    FOREIGN KEY (hub_id, dataset_id) REFERENCES datasets(hub_id, id)
-);
-
-CREATE TABLE IF NOT EXISTS write_access (
-    role_id    uuid,
-    hub_id     uuid,
-    dataset_id uuid,
-    id         uuid,
-
-    created_at timestamptz NOT NULL,
-    revoked_at timestamptz,
-
-    PRIMARY KEY (role_id, hub_id, id),
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-    FOREIGN KEY (hub_id, dataset_id) REFERENCES datasets(hub_id, id)
-);
+CREATE OR REPLACE VIEW current_team_roles_with_name AS
+    WITH ranked AS (
+        SELECT
+            team_id,
+            hub_id,
+            access_level,
+            created_at,
+            ROW_NUMBER()
+            OVER (
+                PARTITION BY team_id, hub_id
+                ORDER BY created_at DESC
+            ) idx
+        FROM team_roles
+    )
+    SELECT
+        ran.team_id,
+        ran.hub_id,
+        hub.name AS hub_name,
+        ran.access_level,
+        ran.created_at
+    FROM
+        ranked ran
+    INNER JOIN
+        hubs hub
+    ON
+        ran.hub_id = hub.id
+    WHERE
+        ran.idx = 1;
 
 CREATE OR REPLACE VIEW current_published_versions AS
     WITH ranked AS (
