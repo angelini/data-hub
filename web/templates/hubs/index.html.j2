@@ -13,7 +13,7 @@
     <thead>
       <tr>
         <th>Name</th>
-        <th>Hive Host</th>
+        <th>Owner</th>
         <th>Created At</th>
       </tr>
     </thead>
@@ -23,7 +23,7 @@
           <td>
             <a href="{{ url_for('datasets.datasets_index_html', hub_id=hub.id) }}">{{ hub.name }}</a>
           </td>
-          <td>{{ hub.hive_host }}</td>
+          <td>{{ hub.team_name }}</td>
           <td>{{ hub.created_at | datetime }}</td>
         </tr>
       {% endfor %}

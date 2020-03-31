@@ -1,0 +1,50 @@
+{% extends 'base.html.j2' %}
+
+{% block nav %}
+  <li><a href="{{ url_for('teams.teams_index_html') }}">Teams</a></li>
+{% endblock %}
+
+{% block content %}
+  <table class="uk-table uk-table-hover">
+    <tbody>
+      <tr>
+        <td>Name</td>
+        <td>{{ name }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <span class="uk-text-large">Members</span>
+  <table class="uk-table uk-table-hover">
+    <thead>
+      <tr>
+        <th>Email</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in members %}
+        <tr>
+          <td>{{ user.email }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <span class="uk-text-large">Roles</span>
+  <table class="uk-table uk-table-hover">
+    <thead>
+      <tr>
+        <th>Hub Name</th>
+        <th>Access Level</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for role in team_roles %}
+        <tr>
+          <td>{{ role.hub_name }}</td>
+          <td>{{ role.access_level }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,4 +1,5 @@
 import flask
+import flask_jwt_extended as flask_jwt
 
 from web.db import AssertionFailure, DbException
 
@@ -12,7 +13,21 @@ def format_datetime(value):
 
 def create_app():
     app = flask.Flask(__name__, instance_relative_config=True)
-    app.config.from_mapping(SECRET_KEY='dev')
+
+    # FIXME: Add production config and keys
+    app.config['SECRET_KEY'] = 'dev'
+    app.config['JWT_SECRET_KEY'] = 'dev'
+    app.config['JWT_TOKEN_LOCATION'] = ('headers', 'cookies')
+    app.config['JWT_COOKIE_SECURE'] = False
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = True
+
+    flask_jwt.JWTManager(app)
+
+    from . import auth
+    app.register_blueprint(auth.bp)
+
+    from . import teams
+    app.register_blueprint(teams.bp)
 
     from . import hubs
     app.register_blueprint(hubs.bp)

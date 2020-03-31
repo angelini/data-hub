@@ -19,7 +19,7 @@ def hubs_index_html():
 @bp.route('/new.json', methods=['POST'])
 def hub_new_json():
     data = flask.request.json
-    hub_id = execute_action(NewHub(data['name'], data['hive_host']))
+    hub_id = execute_action(NewHub(data['team_id'], data['name']))
     return flask.jsonify({'hub_id': hub_id})
 
 
@@ -30,7 +30,7 @@ def hub_new_html():
     if flask.request.method == 'POST':
         data = flask.request.form
         try:
-            execute_action(NewHub(data['name'], data['hive_host']))
+            execute_action(NewHub(data['team_id'], data['name']))
             return flask.redirect(flask.url_for('hubs.hubs_index_html'))
         except DbException as e:
             error = str(e)

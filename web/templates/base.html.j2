@@ -27,6 +27,7 @@
           <nav>
             <div class="uk-navbar-left">
               <ul class="uk-navbar-nav">
+                <li class="uk-parent"><a href="{{ url_for('teams.teams_index_html') }}"><span uk-icon="users"></span></a></li>
                 <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}"><span uk-icon="database"></span></a></li>
                 {% block nav %}{% endblock %}
               </ul>

@@ -9,8 +9,8 @@ import typing as t
 import psycopg2 as psql
 import pytz
 
-from core.data import Backend, Column, Dataset, DatasetVersion, Dependency, Hub, \
-    Partition, PublishedVersion, Type, write
+from core.data import AccessLevel, Backend, Column, Dataset, DatasetVersion, Dependency, Hub, \
+    Partition, PublishedVersion, Team, TeamRole, Type, write
 
 
 class Action(abc.ABC):
@@ -21,13 +21,29 @@ class Action(abc.ABC):
 
 
 @dc.dataclass
-class NewHub(Action):
-    name:      str
-    hive_host: str
+class NewTeam(Action):
+    name: str
 
     def execute(self, cursor):
+        team_id = uuid.uuid4()
+        write(cursor, Team(team_id, self.name, dt.datetime.now(tz=pytz.utc)))
+        return team_id
+
+
+@dc.dataclass
+class NewHub(Action):
+    team_id: uuid.UUID
+    name:    str
+
+    def execute(self, cursor):
+        created_at = dt.datetime.now(tz=pytz.utc)
+
         hub_id = uuid.uuid4()
-        write(cursor, Hub(hub_id, self.name, self.hive_host, dt.datetime.now(tz=pytz.utc)))
+        write(cursor, Hub(hub_id, self.team_id, self.name, created_at))
+
+        team_role_id = uuid.uuid4()
+        write(cursor, TeamRole(team_role_id, self.team_id, hub_id, AccessLevel.ADMIN, created_at))
+
         return hub_id
 
 
@@ -101,19 +117,6 @@ class NewDatasetVersion(Action):
 
 
 @dc.dataclass
-class PublishVersion(Action):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
-
-    def execute(self, cursor):
-        write(cursor, PublishedVersion(self.hub_id,
-                                       self.dataset_id,
-                                       self.version,
-                                       dt.datetime.now(tz=pytz.utc)))
-
-
-@dc.dataclass
 class NewPartition(Action):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
@@ -127,10 +130,10 @@ class NewPartition(Action):
 
     def execute(self, cursor):
         partition_id = uuid.uuid4()
-        write(cursor, Partition(self.hub_id,
+        write(cursor, Partition(partition_id,
+                                self.hub_id,
                                 self.dataset_id,
                                 self.version,
-                                partition_id,
                                 self.path,
                                 self.values,
                                 self.row_count,
@@ -141,6 +144,19 @@ class NewPartition(Action):
         return partition_id
 
 
+@dc.dataclass
+class PublishVersion(Action):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def execute(self, cursor):
+        write(cursor, PublishedVersion(self.hub_id,
+                                       self.dataset_id,
+                                       self.version,
+                                       dt.datetime.now(tz=pytz.utc)))
+
+
 class View(abc.ABC):
 
     @abc.abstractmethod
@@ -149,12 +165,33 @@ class View(abc.ABC):
 
 
 @dc.dataclass
+class ListTeams(View):
+
+    def fetch(self, cursor):
+        cursor.execute('''
+            SELECT id, name, created_at
+            FROM teams
+            ORDER BY created_at
+        ''')
+        return {
+            'teams': [
+                {
+                    'id': row[0],
+                    'name': row[1],
+                    'created_at': row[2],
+                }
+                for row in cursor.fetchall()
+            ]
+        }
+
+
+@dc.dataclass
 class ListHubs(View):
 
     def fetch(self, cursor):
         cursor.execute('''
-            SELECT id, name, hive_host, created_at
-            FROM hubs
+            SELECT id, name, team_id, team_name, created_at
+            FROM hubs_with_team_name
             ORDER BY created_at
         ''')
         return {
@@ -162,8 +199,9 @@ class ListHubs(View):
                 {
                     'id': row[0],
                     'name': row[1],
-                    'hive_host': row[2],
-                    'created_at': row[3],
+                    'team_id': row[2],
+                    'team_name': row[3],
+                    'created_at': row[4],
                 }
                 for row in cursor.fetchall()
             ]
@@ -239,6 +277,57 @@ class ListVersions(View):
                 }
                 for row in cursor.fetchall()
             ]
+        }
+
+
+@dc.dataclass
+class DetailTeam(View):
+    team_id: uuid.UUID
+
+    def fetch(self, cursor):
+        cursor.execute('''
+            SELECT
+                user_id,
+                user_email,
+                created_at
+            FROM
+                current_team_members_with_email
+            WHERE
+                team_id = %s
+        ''', (self.team_id, ))
+        members = [{
+            'user_id': row[0],
+            'user_email': row[1],
+            'created_at': row[2],
+        } for row in cursor.fetchall()]
+
+        cursor.execute('''
+            SELECT
+                hub_id,
+                hub_name,
+                access_level
+            FROM
+                current_team_roles_with_name
+            WHERE
+                team_id = %s
+        ''', (self.team_id, ))
+        roles = [{
+            'hub_id': row[0],
+            'hub_name': row[1],
+            'access_level': row[2],
+        } for row in cursor.fetchall()]
+
+        cursor.execute('''
+            SELECT name
+            FROM teams
+            WHERE id = %s
+        ''', (self.team_id, ))
+        row = cursor.fetchone()
+
+        return {
+            'name': row[0],
+            'members': members,
+            'roles': roles,
         }
 
 
