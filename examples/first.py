@@ -159,26 +159,39 @@ def main():
 
     sales_hub_id = new_hub('Sales', team_id)
 
-    build_full_dataset(sales_hub_id, 'customers', [
-        ('id', IntType.name, '', False, True, False),
-        ('email', StringType.name, '', False, True, True),
-        ('first_name', StringType.name, '', False, False, False),
-        ('last_name', StringType.name, '', False, False, True),
-    ])
+    customers = build_full_dataset(
+        sales_hub_id,
+        'customers',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('email', StringType.name, '', False, True, True),
+            ('first_name', StringType.name, '', False, False, False),
+            ('last_name', StringType.name, '', False, False, True),
+        ]
+    )
 
-    build_full_dataset(sales_hub_id, 'orders', [
-        ('id', IntType.name, '', False, True, False),
-        ('price', IntType.name, '', False, False, False),
-        ('time', IntType.name, '', False, False, False),
-    ])
+    build_full_dataset(
+        sales_hub_id,
+        'orders',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('price', IntType.name, '', False, False, False),
+            ('time', IntType.name, '', False, False, False),
+        ],
+        depends_on=[customers]
+    )
 
     finance_hub_id = new_hub('Finance', team_id)
 
-    build_full_dataset(finance_hub_id, 'expenses', [
-        ('id', IntType.name, '', False, True, False),
-        ('price', IntType.name, '', False, False, False),
-        ('time', IntType.name, '', False, False, False),
-    ])
+    build_full_dataset(
+        finance_hub_id,
+        'expenses',
+        [
+            ('id', IntType.name, '', False, True, False),
+            ('price', IntType.name, '', False, False, False),
+            ('time', IntType.name, '', False, False, False),
+        ]
+    )
 
 
 if __name__ == '__main__':

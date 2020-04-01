@@ -672,6 +672,6 @@ class NoDependencyLoops(Assertion):
 
 
 def execute(action):
-    conn = psql.connect('dbname=dh user=postgres host=localhost')
+    conn = psql.connect('')
     action.execute(conn.cursor())
     conn.commit()

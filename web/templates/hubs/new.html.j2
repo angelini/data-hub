@@ -21,9 +21,13 @@
       </div>
 
       <div class="uk-margin">
-        <label class="uk-form-label" for="hive-host">Hive Host</label>
+        <label class="uk-form-label" for="team-id">Owner</label>
         <div class="uk-form-controls">
-          <input id="hive-host" class="uk-input" name="hive_host" type="text" placeholder="hive://local" required>
+          <select id="team-id" class="uk-select" name="team_id">
+            {% for team in teams %}
+              <option value="{{ team.id }}">{{ team.name }}</option>
+            {% endfor %}
+          </select>
         </div>
       </div>
 

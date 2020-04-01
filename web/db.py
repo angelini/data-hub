@@ -16,7 +16,7 @@ class AssertionFailure(Exception):
 
 
 def connect():
-    return psql.connect('dbname=dh user=postgres host=localhost')
+    return psql.connect('')
 
 
 def fetch_view(view):
