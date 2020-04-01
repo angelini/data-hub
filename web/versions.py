@@ -35,7 +35,7 @@ def version_new_json(hub_id, dataset_id):
                           data['columns'],
                           data['depends_on'])
     )
-    return flask.jsonify({'version': version_id})
+    return flask.jsonify({'version': version_id}), 201
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])

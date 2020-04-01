@@ -20,7 +20,7 @@ def hubs_index_html():
 def hub_new_json():
     data = flask.request.json
     hub_id = execute_action(NewHub(data['team_id'], data['name']))
-    return flask.jsonify({'hub_id': hub_id})
+    return flask.jsonify({'hub_id': hub_id}), 201
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])

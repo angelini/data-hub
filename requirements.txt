@@ -6,6 +6,8 @@ passlib==1.7.2
 pytz==2019.3
 psycopg2==2.8.4
 requests==2.23.0
+structlogger==20.1.0
 
 ipython==7.13.0
 pdbpp==0.10.2
+colorama==0.4.3

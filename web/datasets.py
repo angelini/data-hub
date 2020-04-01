@@ -22,7 +22,7 @@ def datasets_index_html(hub_id):
 def dataset_new_json(hub_id):
     data = flask.request.json
     dataset_id = execute_action(NewDataset(hub_id, data['name']))
-    return flask.jsonify({'dataset_id': dataset_id})
+    return flask.jsonify({'dataset_id': dataset_id}), 201
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])

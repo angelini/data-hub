@@ -20,7 +20,7 @@ def teams_index_html():
 def team_new_json():
     data = flask.request.json
     team_id = execute_action(NewTeam(data['name']))
-    return flask.jsonify({'team_id': team_id})
+    return flask.jsonify({'team_id': team_id}), 201
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])

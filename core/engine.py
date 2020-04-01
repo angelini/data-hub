@@ -8,6 +8,7 @@ import typing as t
 
 import psycopg2 as psql
 import pytz
+import structlog
 
 from core.data import AccessLevel, Backend, Column, Dataset, DatasetVersion, Dependency, Hub, \
     Partition, PublishedVersion, Team, TeamRole, Type, write
@@ -15,8 +16,13 @@ from core.data import AccessLevel, Backend, Column, Dataset, DatasetVersion, Dep
 
 class Action(abc.ABC):
 
-    @abc.abstractmethod
     def execute(self, cursor):
+        log = structlog.get_logger()
+        log.info(f'execute_{self.__class__.__name__}', **self.__dict__)
+        return self._execute(cursor)
+
+    @abc.abstractmethod
+    def _execute(self, cursor):
         pass
 
 
@@ -24,7 +30,7 @@ class Action(abc.ABC):
 class NewTeam(Action):
     name: str
 
-    def execute(self, cursor):
+    def _execute(self, cursor):
         team_id = uuid.uuid4()
         write(cursor, Team(team_id, self.name, dt.datetime.now(tz=pytz.utc)))
         return team_id
@@ -35,7 +41,7 @@ class NewHub(Action):
     team_id: uuid.UUID
     name:    str
 
-    def execute(self, cursor):
+    def _execute(self, cursor):
         created_at = dt.datetime.now(tz=pytz.utc)
 
         hub_id = uuid.uuid4()
@@ -52,7 +58,7 @@ class NewDataset(Action):
     hub_id: uuid.UUID
     name:   str
 
-    def execute(self, cursor):
+    def _execute(self, cursor):
         dataset_id = uuid.uuid4()
         write(cursor, Dataset(self.hub_id, dataset_id, self.name, dt.datetime.now(tz=pytz.utc), None))
         return dataset_id
@@ -70,7 +76,7 @@ class NewDatasetVersion(Action):
     columns:        t.List[t.Tuple[str, str, str, bool, bool, bool]]
     depends_on:     t.List[t.Tuple[str, str, int]]
 
-    def execute(self, cursor):
+    def _execute(self, cursor):
         cursor.execute('''
             SELECT max(version)
             FROM dataset_versions
@@ -128,7 +134,7 @@ class NewPartition(Action):
     start_time: t.Optional[dt.datetime]
     end_time:   t.Optional[dt.datetime]
 
-    def execute(self, cursor):
+    def _execute(self, cursor):
         partition_id = uuid.uuid4()
         write(cursor, Partition(partition_id,
                                 self.hub_id,
@@ -150,7 +156,7 @@ class PublishVersion(Action):
     dataset_id: uuid.UUID
     version:    int
 
-    def execute(self, cursor):
+    def _execute(self, cursor):
         write(cursor, PublishedVersion(self.hub_id,
                                        self.dataset_id,
                                        self.version,
@@ -159,15 +165,20 @@ class PublishVersion(Action):
 
 class View(abc.ABC):
 
-    @abc.abstractmethod
     def fetch(self, cursor):
+        log = structlog.get_logger()
+        log.info(f'fetch_{self.__class__.__name__}', **self.__dict__)
+        return self._fetch(cursor)
+
+    @abc.abstractmethod
+    def _fetch(self, cursor):
         pass
 
 
 @dc.dataclass
 class ListTeams(View):
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         cursor.execute('''
             SELECT id, name, created_at
             FROM teams
@@ -188,7 +199,7 @@ class ListTeams(View):
 @dc.dataclass
 class ListHubs(View):
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         cursor.execute('''
             SELECT id, name, team_id, team_name, created_at
             FROM hubs_with_team_name
@@ -212,7 +223,7 @@ class ListHubs(View):
 class ListDatasets(View):
     hub_id: uuid.UUID
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         cursor.execute('''
             SELECT id, name, version, created_at, published_at
             FROM datasets_with_current_versions
@@ -239,7 +250,7 @@ class ListVersions(View):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         cursor.execute('''
             SELECT
                 ver.version,
@@ -284,7 +295,7 @@ class ListVersions(View):
 class DetailTeam(View):
     team_id: uuid.UUID
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         cursor.execute('''
             SELECT
                 user_id,
@@ -337,7 +348,7 @@ class DetailVersion(View):
     dataset_id: uuid.UUID
     version:    int
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         cursor.execute('''
             SELECT name, type_name, description, is_nullable, is_unique, has_pii
             FROM columns_with_type
@@ -572,7 +583,7 @@ class DetailVersion(View):
 @dc.dataclass
 class PublishedVersions(View):
 
-    def fetch(self, cursor):
+    def _fetch(self, cursor):
         published = cl.defaultdict(lambda: cl.defaultdict(list))
 
         cursor.execute('''
@@ -588,8 +599,13 @@ class PublishedVersions(View):
 class Assertion(abc.ABC):
     status_code: int
 
-    @abc.abstractmethod
     def check(self, cursor):
+        log = structlog.get_logger()
+        log.info(f'check_{self.__class__.__name__}', **self.__dict__)
+        return self._check(cursor)
+
+    @abc.abstractmethod
+    def _check(self, cursor):
         pass
 
     @abc.abstractmethod
@@ -605,7 +621,7 @@ class NoOverlappingPartitions(Assertion):
 
     status_code = 400
 
-    def check(self, cursor):
+    def _check(self, cursor):
         cursor.execute('''
             SELECT
                 is_overlapping
@@ -643,7 +659,7 @@ class VersionExists(Assertion):
 
     status_code = 404
 
-    def check(self, cursor):
+    def _check(self, cursor):
         cursor.execute('''
             SELECT
                 1
@@ -664,7 +680,7 @@ class VersionExists(Assertion):
 class NoDependencyLoops(Assertion):
     status_code = 404
 
-    def check(self, cursor):
+    def _check(self, cursor):
         pass
 
     def message(self):

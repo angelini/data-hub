@@ -1,5 +1,11 @@
+import logging
+import time
+import sys
+import uuid
+
 import flask
 import flask_jwt_extended as flask_jwt
+import structlog
 
 from web.db import AssertionFailure, DbException
 
@@ -12,6 +18,25 @@ def format_datetime(value):
 
 
 def create_app():
+    logging.basicConfig(format='%(message)s', stream=sys.stdout, level=logging.INFO)
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+
+    structlog.configure(
+        processors=[
+            structlog.stdlib.filter_by_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.format_exc_info,
+            structlog.processors.TimeStamper(fmt="%d-%m-%Y %H:%M:%S"),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        context_class=structlog.threadlocal.wrap_dict(dict),
+        logger_factory=structlog.stdlib.LoggerFactory(),
+    )
+
+    logger = structlog.get_logger()
+
     app = flask.Flask(__name__, instance_relative_config=True)
 
     # FIXME: Add production config and keys
@@ -43,9 +68,17 @@ def create_app():
 
     app.jinja_env.filters['datetime'] = format_datetime
 
-    @app.route('/', methods=['GET'])
-    def redirect_index():
-        return flask.redirect(flask.url_for('hubs.hubs_index_html'))
+    @app.before_request
+    def before_request_func():
+        flask.g.start_time = time.time()
+        log = logger.new(request_id=str(uuid.uuid4()))
+        log.info('request_start', method=flask.request.method, url=flask.request.url)
+
+    @app.after_request
+    def after_request_func(response):
+        log = structlog.get_logger()
+        log.info('request_stop', code=response.status_code, time=(time.time() - flask.g.start_time))
+        return response
 
     @app.errorhandler(DbException)
     def handle_db_exception(error):
@@ -62,5 +95,9 @@ def create_app():
         response = flask.jsonify({'error': str(error)})
         response.status_code = error.status_code
         return response
+
+    @app.route('/', methods=['GET'])
+    def redirect_index():
+        return flask.redirect(flask.url_for('hubs.hubs_index_html'))
 
     return app

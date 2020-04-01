@@ -23,7 +23,7 @@ def partition_new_json(hub_id, dataset_id, version):
                      data.get('start_time'),
                      data.get('end_time'))
     )
-    return flask.jsonify({'partition_id': partition_id})
+    return flask.jsonify({'partition_id': partition_id}), 201
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])
