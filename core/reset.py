@@ -12,7 +12,7 @@ def truncate(cursor, kind):
 
 
 if __name__ == '__main__':
-    conn = psql.connect('dbname=dh user=postgres host=localhost')
+    conn = psql.connect('')
     cursor = conn.cursor()
 
     for kind in [Hub, Dataset, Backend, DatasetVersion, PublishedVersion, Type, Column, Partition]:
