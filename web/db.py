@@ -1,3 +1,5 @@
+import flask
+
 import psycopg2 as psql
 import psycopg2.extras
 
@@ -16,16 +18,15 @@ class AssertionFailure(Exception):
 
 
 def connect():
-    return psql.connect('')
+    if 'db' not in flask.g:
+        flask.g.db = flask.current_app.config['db_pool'].getconn()
+    return flask.g.db
 
 
 def fetch_view(view):
     conn = connect()
-    try:
-        cursor = conn.cursor()
-        return view.fetch(cursor)
-    finally:
-        conn.close()
+    cursor = conn.cursor()
+    return view.fetch(cursor)
 
 
 def execute_action(action):
@@ -37,15 +38,10 @@ def execute_action(action):
         return result
     except psql.DatabaseError as e:
         raise DbException(e.diag.message_primary)
-    finally:
-        conn.close()
 
 
 def check_assertion(assertion):
     conn = connect()
-    try:
-        cursor = conn.cursor()
-        if not assertion.check(cursor):
-            raise AssertionFailure(assertion.message(), assertion.status_code)
-    finally:
-        conn.close()
+    cursor = conn.cursor()
+    if not assertion.check(cursor):
+        raise AssertionFailure(assertion.message(), assertion.status_code)

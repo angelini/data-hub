@@ -1,5 +1,6 @@
 .PHONY: check-venv check-web
-.PHONY: install reset example web
+.PHONY: install reset example web web-prod
+.PHONY: nginx nginx-reload
 
 UIKIT_VERSION := 3.3.7
 DATATABLES_VERSION := 1.10.20
@@ -8,9 +9,8 @@ DAGRE_VERSION := 0.5.0
 
 export PYTHONPATH := .
 
-export PGHOST := 172.21.16.1
+export PGHOST := localhost
 export PGUSER := postgres
-export PGPASSWORD := local
 export PGDATABASE := dh
 
 check-venv:
@@ -19,7 +19,7 @@ ifndef VIRTUAL_ENV
 endif
 
 check-web:
-ifneq ($(shell curl -s -I "http://localhost:5000/" | head -n 1), HTTP/1.0 302 FOUND)
+ifneq ($(shell curl -s -I 'http://localhost:5000/' | head -n 1 | awk '{print $$2}'),  302)
 	$(error server is not running)
 endif
 
@@ -76,7 +76,25 @@ reset:
 example: check-web reset
 	python examples/first.py
 
+example-many: check-web
+	python examples/many.py
+
 web: export FLASK_APP=web
 web: export FLASK_ENV=development
 web:
 	flask run
+
+web-prod: export FLASK_APP=web
+web-prod: export FLASK_ENV=production
+web-prod:
+	gunicorn -w 3 -b 127.0.0.1:5000 wsgi:app
+
+nginx.conf: check-venv config/templates/nginx.conf.j2
+	python config/generate.py
+
+nginx: nginx.conf
+	mkdir -p logs
+	nginx -c $(shell pwd)/nginx.conf
+
+nginx-reload:
+	nginx -c $(shell pwd)/nginx.conf -s reload

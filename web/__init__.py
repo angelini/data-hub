@@ -5,6 +5,8 @@ import uuid
 
 import flask
 import flask_jwt_extended as flask_jwt
+import psycopg2 as psql
+import psycopg2.pool
 import structlog
 
 from web.db import AssertionFailure, DbException
@@ -46,6 +48,8 @@ def create_app():
     app.config['JWT_COOKIE_SECURE'] = False
     app.config['JWT_COOKIE_CSRF_PROTECT'] = True
 
+    app.config['db_pool'] = psql.pool.SimpleConnectionPool(1, 20, '')
+
     flask_jwt.JWTManager(app)
 
     from . import auth
@@ -69,16 +73,22 @@ def create_app():
     app.jinja_env.filters['datetime'] = format_datetime
 
     @app.before_request
-    def before_request_func():
+    def before_request_logger():
         flask.g.start_time = time.time()
         log = logger.new(request_id=str(uuid.uuid4()))
         log.info('request_start', method=flask.request.method, url=flask.request.url)
 
     @app.after_request
-    def after_request_func(response):
+    def after_request_logger(response):
         log = structlog.get_logger()
         log.info('request_stop', code=response.status_code, time=(time.time() - flask.g.start_time))
         return response
+
+    @app.teardown_appcontext
+    def close_db_pool(e):
+        db = flask.g.pop('db', None)
+        if db is not None:
+            app.config['db_pool'].putconn(db)
 
     @app.errorhandler(DbException)
     def handle_db_exception(error):

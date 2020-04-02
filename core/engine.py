@@ -14,11 +14,24 @@ from core.data import AccessLevel, Backend, Column, Dataset, DatasetVersion, Dep
     Partition, PublishedVersion, Team, TeamRole, Type, write
 
 
+def simplify_arg(arg):
+    if isinstance(arg, uuid.UUID):
+        return str(arg)
+    return arg
+
+
+def simplify_args(args):
+    return {
+        key: simplify_arg(value)
+        for key, value in args.items()
+    }
+
+
 class Action(abc.ABC):
 
     def execute(self, cursor):
         log = structlog.get_logger()
-        log.info(f'execute_{self.__class__.__name__}', **self.__dict__)
+        log.info(f'execute_{self.__class__.__name__}', **simplify_args(self.__dict__))
         return self._execute(cursor)
 
     @abc.abstractmethod
@@ -167,7 +180,7 @@ class View(abc.ABC):
 
     def fetch(self, cursor):
         log = structlog.get_logger()
-        log.info(f'fetch_{self.__class__.__name__}', **self.__dict__)
+        log.info(f'fetch_{self.__class__.__name__}', **simplify_args(self.__dict__))
         return self._fetch(cursor)
 
     @abc.abstractmethod
@@ -601,7 +614,7 @@ class Assertion(abc.ABC):
 
     def check(self, cursor):
         log = structlog.get_logger()
-        log.info(f'check_{self.__class__.__name__}', **self.__dict__)
+        log.info(f'check_{self.__class__.__name__}', **simplify_args(self.__dict__))
         return self._check(cursor)
 
     @abc.abstractmethod

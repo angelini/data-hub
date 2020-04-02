@@ -110,10 +110,10 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
     return (hub_id, dataset_id, published_version)
 
 
-def main():
-    team_id = new_team('Everyone')
+def main(prefix=''):
+    team_id = new_team(f'{prefix}Everyone')
 
-    marketing_hub_id = new_hub('Marketing', team_id)
+    marketing_hub_id = new_hub(f'{prefix}Marketing', team_id)
 
     visits = build_full_dataset(
         marketing_hub_id,
@@ -157,7 +157,7 @@ def main():
         depends_on=[leads, campaigns]
     )
 
-    sales_hub_id = new_hub('Sales', team_id)
+    sales_hub_id = new_hub(f'{prefix}Sales', team_id)
 
     customers = build_full_dataset(
         sales_hub_id,
@@ -181,7 +181,7 @@ def main():
         depends_on=[customers]
     )
 
-    finance_hub_id = new_hub('Finance', team_id)
+    finance_hub_id = new_hub(f'{prefix}Finance', team_id)
 
     build_full_dataset(
         finance_hub_id,
