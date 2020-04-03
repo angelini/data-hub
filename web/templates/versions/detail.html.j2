@@ -1,9 +1,9 @@
 {% extends 'base.html.j2' %}
 
 {% block nav %}
-  <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}" class="pure-menu-link">Hubs</a></li>
-  <li class="uk-parent"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
-  <li class="uk-active"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}" class="pure-menu-link">Versions</a></li>
+  <li class="uk-parent"><a href="{{ url_for('hubs.index_html') }}" class="pure-menu-link">Hubs</a></li>
+  <li class="uk-parent"><a href="{{ url_for('datasets.index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
+  <li class="uk-active"><a href="{{ url_for('versions.index_html', hub_id=hub_id, dataset_id=dataset_id) }}" class="pure-menu-link">Versions</a></li>
 {% endblock %}
 
 {% block content %}
@@ -71,7 +71,7 @@
     </div>
   {% endif %}
 
-  <form id="new-partition" method="post" action="{{ url_for('partitions.partition_new_html', hub_id=hub_id, dataset_id=dataset_id, version=version_int) }}">
+  <form id="new-partition" method="post" action="{{ url_for('partitions.new_html', hub_id=hub_id, dataset_id=dataset_id, version=version_int) }}">
     <fieldset class="top-row-input uk-fieldset">
       <div class="uk-flex uk-flex-middle">
         <div>

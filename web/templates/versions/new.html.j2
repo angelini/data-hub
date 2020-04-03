@@ -1,13 +1,13 @@
 {% extends 'base.html.j2' %}
 
 {% block nav %}
-  <li class="uk-parent"><a href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
-  <li class="uk-parent"><a href="{{ url_for('datasets.datasets_index_html', hub_id=hub_id) }}">Datasets</a></li>
-  <li class="uk-parent"><a href="{{ url_for('versions.versions_index_html', hub_id=hub_id, dataset_id=dataset_id) }}">Versions</a></li>
+  <li class="uk-parent"><a href="{{ url_for('hubs.index_html') }}">Hubs</a></li>
+  <li class="uk-parent"><a href="{{ url_for('datasets.index_html', hub_id=hub_id) }}">Datasets</a></li>
+  <li class="uk-parent"><a href="{{ url_for('versions.index_html', hub_id=hub_id, dataset_id=dataset_id) }}">Versions</a></li>
 {% endblock %}
 
 {% block content %}
-  <form id="new-version" class="uk-form-horizontal" action="{{ url_for('versions.version_new_html', hub_id=hub_id, dataset_id=dataset_id) }}" method="post">
+  <form id="new-version" class="uk-form-horizontal" action="{{ url_for('versions.new_html', hub_id=hub_id, dataset_id=dataset_id) }}" method="post">
     <fieldset class="uk-fieldset uk-container-small">
       {% if error %}
         <div class="uk-alert-danger" uk-alert>

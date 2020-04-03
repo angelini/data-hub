@@ -1,11 +1,11 @@
 {% extends 'base.html.j2' %}
 
 {% block nav %}
-  <li class="uk-active"><a href="{{ url_for('hubs.hubs_index_html') }}">Hubs</a></li>
+  <li class="uk-active"><a href="{{ url_for('hubs.index_html') }}">Hubs</a></li>
 {% endblock %}
 
 {% block buttons %}
-  <a class="uk-button uk-button-primary" href="{{ url_for('hubs.hub_new_html') }}">Add Hub</a>
+  <a class="uk-button uk-button-primary" href="{{ url_for('hubs.new_html') }}">Add Hub</a>
 {% endblock %}
 
 {% block content %}
@@ -21,7 +21,7 @@
       {% for hub in hubs %}
         <tr>
           <td>
-            <a href="{{ url_for('datasets.datasets_index_html', hub_id=hub.id) }}">{{ hub.name }}</a>
+            <a href="{{ url_for('datasets.index_html', hub_id=hub.id) }}">{{ hub.name }}</a>
           </td>
           <td>{{ hub.team_name }}</td>
           <td>{{ hub.created_at | datetime }}</td>

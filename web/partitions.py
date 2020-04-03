@@ -10,7 +10,7 @@ bp = flask.Blueprint('partitions', __name__,
 
 
 @bp.route('/new.json', methods=['POST'])
-def partition_new_json(hub_id, dataset_id, version):
+def new_json(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     data = flask.request.json
     partition_id = execute_action(
@@ -27,7 +27,7 @@ def partition_new_json(hub_id, dataset_id, version):
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])
-def partition_new_html(hub_id, dataset_id, version):
+def new_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     if flask.request.method == 'POST':
         data = flask.request.form
@@ -55,7 +55,7 @@ def partition_new_html(hub_id, dataset_id, version):
                          start_time,
                          end_time)
         )
-        return flask.redirect(flask.url_for('versions.version_detail_html',
+        return flask.redirect(flask.url_for('versions.detail_html',
                                             hub_id=hub_id, dataset_id=dataset_id, version=version))
 
     return flask.render_template('partitions/new.html.j2',

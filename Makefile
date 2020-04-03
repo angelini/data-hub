@@ -9,9 +9,10 @@ DAGRE_VERSION := 0.5.0
 
 export PYTHONPATH := .
 
-export PGHOST := localhost
-export PGUSER := postgres
-export PGDATABASE := dh
+export PGHOST ?= localhost
+export PGUSER ?= postgres
+export PGDATABASE ?= dh
+export PGPASSWORD ?=
 
 check-venv:
 ifndef VIRTUAL_ENV

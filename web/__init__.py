@@ -108,6 +108,6 @@ def create_app():
 
     @app.route('/', methods=['GET'])
     def redirect_index():
-        return flask.redirect(flask.url_for('hubs.hubs_index_html'))
+        return flask.redirect(flask.url_for('hubs.index_html'))
 
     return app

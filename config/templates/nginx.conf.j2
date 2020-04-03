@@ -25,8 +25,9 @@ http {
   server_names_hash_bucket_size 128;
 
   gzip on;
-  gunzip on;
   gzip_static always;
+  gzip_proxied any;
+  gzip_types text/plain application/javascript text/javascript text/css;
 
   upstream app_server {
     server 127.0.0.1:5000 fail_timeout=0;
