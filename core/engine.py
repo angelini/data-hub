@@ -6,12 +6,15 @@ import pathlib as pl
 import uuid
 import typing as t
 
+import passlib.context
 import psycopg2 as psql
 import pytz
 import structlog
 
 from core.data import AccessLevel, Backend, Column, Dataset, DatasetVersion, Dependency, Hub, \
-    Partition, PublishedVersion, Team, TeamRole, Type, write
+    Partition, PublishedVersion, Team, TeamMember, TeamRole, Type, User, write
+
+pwd_context = passlib.context.CryptContext(schemes=['argon2'])
 
 
 def simplify_arg(arg):
@@ -40,6 +43,18 @@ class Action(abc.ABC):
 
 
 @dc.dataclass
+class NewUser(Action):
+    email:    str
+    password: str
+
+    def _execute(self, cursor):
+        user_id = uuid.uuid4()
+        password_hash = pwd_context.hash(self.password)
+        write(cursor, User(user_id, self.email, password_hash, dt.datetime.now(tz=pytz.utc)))
+        return user_id
+
+
+@dc.dataclass
 class NewTeam(Action):
     name: str
 
@@ -47,6 +62,17 @@ class NewTeam(Action):
         team_id = uuid.uuid4()
         write(cursor, Team(team_id, self.name, dt.datetime.now(tz=pytz.utc)))
         return team_id
+
+
+@dc.dataclass
+class NewTeamMember(Action):
+    team_id: uuid.UUID
+    user_id: uuid.UUID
+
+    def _execute(self, cursor):
+        member_id = uuid.uuid4()
+        write(cursor, TeamMember(member_id, self.team_id, self.user_id, dt.datetime.now(tz=pytz.utc), None))
+        return member_id
 
 
 @dc.dataclass
@@ -189,6 +215,27 @@ class View(abc.ABC):
 
 
 @dc.dataclass
+class ListUsers(View):
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT id, email, created_at
+            FROM users
+            ORDER BY created_at
+        ''')
+        return {
+            'users': [
+                {
+                    'id': row[0],
+                    'email': row[1],
+                    'created_at': row[2],
+                }
+                for row in cursor.fetchall()
+            ]
+        }
+
+
+@dc.dataclass
 class ListTeams(View):
 
     def _fetch(self, cursor):
@@ -320,8 +367,8 @@ class DetailTeam(View):
                 team_id = %s
         ''', (self.team_id, ))
         members = [{
-            'user_id': row[0],
-            'user_email': row[1],
+            'id': row[0],
+            'email': row[1],
             'created_at': row[2],
         } for row in cursor.fetchall()]
 
@@ -348,10 +395,16 @@ class DetailTeam(View):
         ''', (self.team_id, ))
         row = cursor.fetchone()
 
+        member_ids = [user['id'] for user in members]
+        users = [user
+                 for user in ListUsers()._fetch(cursor)['users']
+                 if user['id'] not in member_ids]
+
         return {
             'name': row[0],
             'members': members,
             'roles': roles,
+            'users': users,
         }
 
 
@@ -661,7 +714,25 @@ class NoOverlappingPartitions(Assertion):
         return cursor.rowcount == 0
 
     def message(self):
-        return f'{self.hub_id}::{self.dataset_id}::{self.version} contains overlapping partitions'
+        return f'Version {self.hub_id}::{self.dataset_id}::{self.version} contains overlapping partitions'
+
+
+@dc.dataclass
+class TeamExists(Assertion):
+    team_id: int
+
+    status_code = 404
+
+    def _check(self, cursor):
+        cursor.execute('''
+            SELECT 1
+            FROM teams
+            WHERE id = %s
+        ''', (self.team_id, ))
+        return cursor.rowcount == 1
+
+    def message(self):
+        return f'Team {self.team_id} does not exist'
 
 
 @dc.dataclass
@@ -691,7 +762,7 @@ class VersionExists(Assertion):
 
 @dc.dataclass
 class NoDependencyLoops(Assertion):
-    status_code = 404
+    status_code = 400
 
     def _check(self, cursor):
         pass

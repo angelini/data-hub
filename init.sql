@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash text        NOT NULL,
     created_at    timestamptz NOT NULL,
 
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CONSTRAINT email_length CHECK (char_length(email) >= 2 AND char_length(email) < 1028)
 );
 
 CREATE TABLE IF NOT EXISTS teams (

@@ -32,24 +32,36 @@ def post(path, data):
     return response.json()
 
 
+def new_user(email, password):
+    return post(
+        'users/new.json',
+        {'email': email, 'password': password},
+    )['user_id']
+
 def new_team(name):
     return post(
         'teams/new.json',
-        {'name': name}
+        {'name': name},
     )['team_id']
 
+
+def new_team_member(team_id, user_id):
+    return post(
+        f'teams/{team_id}/new_member.json',
+        {'user_id': user_id},
+    )['member_id']
 
 def new_hub(name, team_id):
     return post(
         'hubs/new.json',
-        {'name': name, 'team_id': team_id}
+        {'name': name, 'team_id': team_id},
     )['hub_id']
 
 
 def new_dataset(hub_id, name):
     return post(
         f'hubs/{hub_id}/datasets/new.json',
-        {'name': name}
+        {'name': name},
     )['dataset_id']
 
 
@@ -58,7 +70,7 @@ def new_version(hub_id, dataset_id, backend, path, keys, description, is_overlap
         f'hubs/{hub_id}/datasets/{dataset_id}/versions/new.json',
         {'backend': backend, 'path': path, 'partition_keys': keys,
          'description': description, 'is_overlapping': is_overlapping,
-         'columns': columns, 'depends_on': depends_on}
+         'columns': columns, 'depends_on': depends_on},
     )['version']
 
 
@@ -70,7 +82,7 @@ def new_partition(hub_id, dataset_id, version, path, values, count, start, end):
     return post(
         f'hubs/{hub_id}/datasets/{dataset_id}/versions/{version}/partitions/new.json',
         {'path': path, 'partition_values': values,
-         'row_count': count, 'start_time': start, 'end_time': end}
+         'row_count': count, 'start_time': start, 'end_time': end},
     )['partition_id']
 
 
@@ -111,7 +123,11 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
 
 
 def main(prefix=''):
+    user_id = new_user(f'{prefix}default@local', 'pass')
+    new_user(f'{prefix}other@local', 'pass')
+
     team_id = new_team(f'{prefix}Everyone')
+    new_team_member(team_id, user_id)
 
     marketing_hub_id = new_hub(f'{prefix}Marketing', team_id)
 

@@ -1,7 +1,7 @@
 import flask
 
-from core.engine import DetailTeam, ListTeams, NewTeam
-from web.db import DbException, fetch_view, execute_action
+from core.engine import DetailTeam, ListHubs, ListTeams, ListUsers, NewTeam, NewTeamMember, TeamExists
+from web.db import check_assertion, DbException, fetch_view, execute_action
 
 bp = flask.Blueprint('teams', __name__, url_prefix='/teams')
 
@@ -40,12 +40,30 @@ def new_html():
 
 @bp.route('/<uuid:team_id>/detail.json', methods=['GET'])
 def detail_json(team_id):
+    check_assertion(TeamExists(team_id))
     return flask.jsonify(fetch_view(DetailTeam(team_id)))
 
 
 @bp.route('/<uuid:team_id>/detail.html', methods=['GET'])
 def detail_html(team_id):
+    check_assertion(TeamExists(team_id))
     details = fetch_view(DetailTeam(team_id))
     return flask.render_template('teams/detail.html.j2',
                                  team_id=team_id,
                                  **details)
+
+
+@bp.route('/<uuid:team_id>/new_member.json', methods=['POST'])
+def new_member_json(team_id):
+    data = flask.request.json
+    check_assertion(TeamExists(team_id))
+    member_id = execute_action(NewTeamMember(team_id, data['user_id']))
+    return flask.jsonify({'member_id': member_id})
+
+
+@bp.route('/<uuid:team_id>/new_member.html', methods=['POST'])
+def new_member_html(team_id):
+    data = flask.request.form
+    check_assertion(TeamExists(team_id))
+    execute_action(NewTeamMember(team_id, data['user_id']))
+    return flask.redirect(flask.url_for('teams.detail_html', team_id=team_id))

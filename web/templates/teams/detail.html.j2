@@ -14,21 +14,51 @@
     </tbody>
   </table>
 
-  <span class="uk-text-large">Members</span>
-  <table class="uk-table uk-table-hover">
-    <thead>
-      <tr>
-        <th>Email</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for user in members %}
-        <tr>
-          <td>{{ user.email }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <form id="new-member" method="post" action="{{ url_for('teams.new_member_html', team_id=team_id) }}">
+    <fieldset class="top-row-input uk-fieldset">
+      <div class="uk-flex uk-flex-middle">
+        <div>
+          <span class="uk-text-large">Members</span>
+        </div>
+        <div>
+          <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+        </div>
+      </div>
+      <table class="uk-table uk-table-hover">
+        <thead>
+          <tr>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr hidden class="input-row">
+            <td>
+              <select class="uk-select" name="user_id">
+                {% for user in users %}
+                  <option value="{{ user.id }}">{{ user.email }}</option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <div class="uk-flex uk-flex-around">
+                <div>
+                  <a class="remove-row uk-icon-link"><span uk-icon="trash"></span></a>
+                </div>
+                <div>
+                  <a class="submit-row uk-icon-link"><span uk-icon="check"></span></a>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% for user in members %}
+            <tr>
+              <td>{{ user.email }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </fieldset>
+  </form>
 
   <span class="uk-text-large">Roles</span>
   <table class="uk-table uk-table-hover">
@@ -39,7 +69,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for role in team_roles %}
+      {% for role in roles %}
         <tr>
           <td>{{ role.hub_name }}</td>
           <td>{{ role.access_level }}</td>
@@ -47,4 +77,8 @@
       {% endfor %}
     </tbody>
   </table>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='topRowInput.js') }}"></script>
 {% endblock %}
