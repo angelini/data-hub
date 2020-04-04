@@ -13,6 +13,15 @@ class AccessLevel(enum.Enum):
     WRITE = 'write'
     ADMIN = 'admin'
 
+    _order = ['admin', 'write', 'read', 'none']
+
+    @classmethod
+    def preferred_level_raw(cls, *args):
+        for level in cls._order:
+            if level in args:
+                return level
+        return 'none'
+
 
 class Entry(abc.ABC):
     table_name: str

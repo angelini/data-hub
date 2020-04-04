@@ -352,6 +352,47 @@ class ListVersions(View):
 
 
 @dc.dataclass
+class DetailUser(View):
+    email: str
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT id
+            FROM users
+            WHERE email = %s
+        ''', (self.email, ))
+        user_id = cursor.fetchone()[0]
+
+        cursor.execute('''
+            WITH user_teams AS (
+                SELECT team_id
+                FROM team_members
+                WHERE user_id = %s
+            )
+            SELECT
+                rol.hub_id,
+                rol.access_level
+            FROM
+                current_team_roles_with_name rol
+            INNER JOIN
+                user_teams usr
+            ON
+                rol.team_id = usr.team_id
+        ''', (user_id, ))
+        roles = {}
+        for row in cursor.fetchall():
+            hub_id = str(row[0])
+            if hub_id in roles:
+                roles[hub_id] = AccessLevel.preferred_level_raw(roles[hub_id], row[1])
+            else:
+                roles[hub_id] = row[1]
+
+        return {
+            'user_id': user_id,
+            'roles': roles,
+        }
+
+@dc.dataclass
 class DetailTeam(View):
     team_id: uuid.UUID
 
@@ -761,14 +802,27 @@ class VersionExists(Assertion):
 
 
 @dc.dataclass
-class NoDependencyLoops(Assertion):
-    status_code = 400
+class CorrectPassword(Assertion):
+    email:    str
+    password: str
+
+    status_code = 403
 
     def _check(self, cursor):
-        pass
+        cursor.execute('''
+            SELECT password_hash
+            FROM users
+            WHERE email = %s
+        ''', (self.email, ))
+
+        if cursor.rowcount == 0:
+            return False
+
+        hash = cursor.fetchone()[0]
+        return pwd_context.verify(self.password, hash)
 
     def message(self):
-        pass
+        return f'Incorrect password for {self.email}'
 
 
 def execute(action):

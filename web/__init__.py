@@ -14,7 +14,6 @@ from web.db import AssertionFailure, DbException
 
 def format_datetime(value):
     if value:
-        # return value.strftime('%Y-%m-%d %H:%M:%S %Z')
         return value.strftime('%B %d, %Y %H:%M:%S')
     return ''
 
@@ -30,7 +29,7 @@ def create_app():
             structlog.processors.StackInfoRenderer(),
             structlog.dev.set_exc_info,
             structlog.processors.format_exc_info,
-            structlog.processors.TimeStamper(fmt="%d-%m-%Y %H:%M:%S"),
+            structlog.processors.TimeStamper(fmt='%d-%m-%Y %H:%M:%S'),
             structlog.dev.ConsoleRenderer(),
         ],
         context_class=structlog.threadlocal.wrap_dict(dict),
@@ -81,6 +80,23 @@ def create_app():
         log = logger.new(request_id=str(uuid.uuid4()))
         log.info('request_start', method=flask.request.method, url=flask.request.url)
 
+    exclude_authorization = [
+        'auth.login_html', 'auth.login_json', 'redirect_index', 'users.new_json',
+    ]
+
+    @app.before_request
+    def before_request_authorization():
+        rule = flask.request.url_rule
+        if rule and rule.endpoint in exclude_authorization:
+            return
+
+        try:
+            flask_jwt.verify_jwt_in_request()
+        except flask_jwt.exceptions.JWTExtendedException:
+            if flask.request.url.endswith('html'):
+                return flask.redirect(flask.url_for('auth.login_html')), 401
+            return flask.jsonify({'error': 'missing access token'}), 401
+
     @app.after_request
     def after_request_logger(response):
         log = structlog.get_logger()
@@ -97,17 +113,13 @@ def create_app():
     def handle_db_exception(error):
         if flask.request.url.endswith('html'):
             return flask.render_template('error.html.j2', error=str(error)), 500
-        response = flask.jsonify({'error': str(error)})
-        response.status_code = 500
-        return response
+        return flask.jsonify({'error': str(error)}), 500
 
     @app.errorhandler(AssertionFailure)
     def handle_assertion_failure(error):
         if flask.request.url.endswith('html'):
             return flask.render_template('error.html.j2', error=str(error)), error.status_code
-        response = flask.jsonify({'error': str(error)})
-        response.status_code = error.status_code
-        return response
+        return flask.jsonify({'error': str(error)}), error.status_code
 
     @app.route('/', methods=['GET'])
     def redirect_index():

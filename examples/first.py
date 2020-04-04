@@ -20,15 +20,40 @@ HOST = 'localhost'
 PORT = 5000
 
 
-def post(path, data):
+def get_access_token_builder():
+    memoized = {}
+
+    def get():
+        if 'access_token' not in memoized:
+            response = requests.post(f'http://{HOST}:{PORT}/auth/login.json',
+                                     headers={'Content-type': 'application/json'},
+                                     json={'email': 'default@local', 'password': 'pass'})
+            response.raise_for_status()
+            memoized['access_token'] = response.json()['access_token']
+        return memoized['access_token']
+
+    return get
+
+
+get_access_token = get_access_token_builder()
+
+
+def post(path, data, auth=True):
     if not path.startswith('/'):
         path = '/' + path
+
+    headers = {'Content-type': 'application/json'}
+    if auth:
+        headers['Authorization'] = f'Bearer {get_access_token()}'
+
     response = requests.post(f'http://{HOST}:{PORT}{path}',
                              data=json.dumps(data, cls=DateTimeEncoder),
-                             headers={'Content-type': 'application/json'})
+                             headers=headers)
+
     if response.status_code >= 400:
         print(response.text)
     response.raise_for_status()
+
     return response.json()
 
 
@@ -36,6 +61,7 @@ def new_user(email, password):
     return post(
         'users/new.json',
         {'email': email, 'password': password},
+        auth=False
     )['user_id']
 
 def new_team(name):

@@ -7,30 +7,32 @@
 {% endblock %}
 
 {% block content %}
-  <table class="uk-table uk-table-hover">
-    <tbody>
-      <tr>
-        <td>Version</td>
-        <td>{{ version.version }}</td>
-      </tr>
-      <tr>
-        <td>Backend</td>
-        <td>{{ version.module }}</td>
-      </tr>
-      <tr>
-        <td>Path</td>
-        <td>{{ version.path }}</td>
-      </tr>
-      <tr>
-        <td>Description</td>
-        <td>{{ version.description }}</td>
-      </tr>
-      <tr>
-        <td>Created At</td>
-        <td>{{ version.created_at | datetime }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="uk-container-small">
+    <table class="uk-table uk-table-hover">
+      <tbody>
+        <tr>
+          <td>Version</td>
+          <td>{{ version.version }}</td>
+        </tr>
+        <tr>
+          <td>Backend</td>
+          <td>{{ version.module }}</td>
+        </tr>
+        <tr>
+          <td>Path</td>
+          <td>{{ version.path }}</td>
+        </tr>
+        <tr>
+          <td>Description</td>
+          <td>{{ version.description }}</td>
+        </tr>
+        <tr>
+          <td>Created At</td>
+          <td>{{ version.created_at | datetime }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <span class="uk-text-large">Columns</span>
   <table class="uk-table uk-table-hover">

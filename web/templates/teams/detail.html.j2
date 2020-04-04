@@ -5,14 +5,16 @@
 {% endblock %}
 
 {% block content %}
-  <table class="uk-table uk-table-hover">
-    <tbody>
-      <tr>
-        <td>Name</td>
-        <td>{{ name }}</td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="uk-container-small">
+    <table class="uk-table uk-table-hover">
+      <tbody>
+        <tr>
+          <td>Name</td>
+          <td>{{ name }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   <form id="new-member" method="post" action="{{ url_for('teams.new_member_html', team_id=team_id) }}">
     <fieldset class="top-row-input uk-fieldset">

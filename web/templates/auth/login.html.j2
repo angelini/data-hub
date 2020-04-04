@@ -1,0 +1,31 @@
+{% extends 'base.html.j2' %}
+
+{% block content %}
+  <form class="uk-container-small uk-form-horizontal" action="{{ url_for('auth.login_html') }}" method="post">
+    {% if error %}
+      <div class="uk-alert-danger" uk-alert>
+        <span>{{ error }}</span>
+        <a class="uk-alert-close" uk-close></a>
+      </div>
+    {% endif %}
+    <fieldset class="uk-fieldset">
+      <div class="uk-margin">
+        <label class="uk-form-label" for="email">Email</label>
+        <div class="uk-form-controls">
+          <input id="email" class="uk-input" name="email" type="text" required>
+        </div>
+      </div>
+
+      <div class="uk-margin">
+        <label class="uk-form-label" for="password">Password</label>
+        <div class="uk-form-controls">
+          <input id="password" class="uk-input" name="password" type="password" required>
+        </div>
+      </div>
+
+      <div class="uk-margin uk-form-controls">
+        <button type="submit" class="uk-button uk-button-primary">Login</button>
+      </div>
+    </fieldset>
+  </form>
+{% endblock %}
