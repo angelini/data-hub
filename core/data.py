@@ -8,11 +8,11 @@ import uuid
 
 class AccessLevel:
     ADMIN = 'admin'
-    WRITE = 'write'
-    READ = 'read'
+    WRITER = 'writer'
+    READER = 'reader'
     NONE = 'none'
 
-    _order = [ADMIN, WRITE, READ, NONE]
+    _order = [ADMIN, WRITER, READER, NONE]
 
     @classmethod
     def highest_level(cls, *args):
@@ -23,11 +23,11 @@ class AccessLevel:
 
     @classmethod
     def can_read(cls, level):
-        return cls._order.index(level) <= cls._order.index('read')
+        return cls._order.index(level) <= cls._order.index('reader')
 
     @classmethod
     def can_write(cls, level):
-        return cls._order.index(level) <= cls._order.index('write')
+        return cls._order.index(level) <= cls._order.index('writer')
 
 
 class Entry(abc.ABC):

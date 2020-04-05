@@ -1,8 +1,8 @@
 import flask
-import flask_jwt_extended as flask_jwt
 
-from core.data import AccessLevel, Backends, Types
+from core.data import Backends, Types
 from core.engine import DetailVersion, ListVersions, NewDatasetVersion, PublishedVersions, PublishVersion, VersionExists
+from web.auth import can_read_current_hub, auth_write_current_hub
 from web.db import DbException, check_assertion, fetch_view, execute_action
 
 bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions')
@@ -10,14 +10,7 @@ bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datas
 
 @bp.before_request
 def authorize_before_request():
-    hub_id = str(flask.request.view_args['hub_id'])
-    roles = flask_jwt.get_jwt_claims()
-
-    if not AccessLevel.can_read(roles.get(str(hub_id), 'none')):
-        error = f'unauthorized access to {hub_id}'
-        if flask.request.url.endswith('html'):
-            return flask.render_template('error.html.j2', error=error), 401
-        return flask.jsonify({'error': error}), 401
+    return can_read_current_hub()
 
 
 @bp.route('/index.json', methods=['GET'])
@@ -35,6 +28,7 @@ def index_html(hub_id, dataset_id):
 
 
 @bp.route('/new.json', methods=['POST'])
+@auth_write_current_hub
 def new_json(hub_id, dataset_id):
     data = flask.request.json
     version_id = execute_action(
@@ -52,6 +46,7 @@ def new_json(hub_id, dataset_id):
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])
+@auth_write_current_hub
 def new_html(hub_id, dataset_id):
     error = None
 
@@ -121,6 +116,7 @@ def detail_html(hub_id, dataset_id, version):
 
 
 @bp.route('/<int:version>/publish.json', methods=['POST'])
+@auth_write_current_hub
 def publish_json(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))
@@ -128,6 +124,7 @@ def publish_json(hub_id, dataset_id, version):
 
 
 @bp.route('/<int:version>/publish.html', methods=['POST'])
+@auth_write_current_hub
 def publish_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))

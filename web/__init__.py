@@ -46,7 +46,7 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = 'dev'
     app.config['JWT_TOKEN_LOCATION'] = ('headers', 'cookies')
     app.config['JWT_COOKIE_SECURE'] = False
-    app.config['JWT_COOKIE_CSRF_PROTECT'] = True
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 
     app.config['db_pool'] = psql.pool.SimpleConnectionPool(1, 20, '')
 
