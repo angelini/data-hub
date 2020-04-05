@@ -1,19 +1,32 @@
 import flask
+import flask_jwt_extended as flask_jwt
 
+from core.data import AccessLevel
 from core.engine import ListHubs, ListTeams, NewHub
 from web.db import DbException, fetch_view, execute_action
 
 bp = flask.Blueprint('hubs', __name__, url_prefix='/hubs')
 
 
+def list_readable_hubs():
+    roles = flask_jwt.get_jwt_claims()
+    return {
+        'hubs': [
+            hub
+            for hub in fetch_view(ListHubs())['hubs']
+            if AccessLevel.can_read(roles.get(str(hub['id']), 'none'))
+        ]
+    }
+
+
 @bp.route('/index.json', methods=['GET'])
 def index_json():
-    return flask.jsonify(fetch_view(ListHubs()))
+    return flask.jsonify(list_readable_hubs())
 
 
 @bp.route('/index.html', methods=['GET'])
 def index_html():
-    return flask.render_template('hubs/index.html.j2', **fetch_view(ListHubs()))
+    return flask.render_template('hubs/index.html.j2', **list_readable_hubs())
 
 
 @bp.route('/new.json', methods=['POST'])

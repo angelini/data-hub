@@ -1,26 +1,33 @@
 import abc
 import dataclasses as dc
 import datetime as dt
-import enum
 import pathlib as pl
 import typing as t
 import uuid
 
 
-class AccessLevel(enum.Enum):
-    NONE = 'none'
-    READ = 'read'
-    WRITE = 'write'
+class AccessLevel:
     ADMIN = 'admin'
+    WRITE = 'write'
+    READ = 'read'
+    NONE = 'none'
 
-    _order = ['admin', 'write', 'read', 'none']
+    _order = [ADMIN, WRITE, READ, NONE]
 
     @classmethod
-    def preferred_level_raw(cls, *args):
+    def highest_level(cls, *args):
         for level in cls._order:
             if level in args:
                 return level
         return 'none'
+
+    @classmethod
+    def can_read(cls, level):
+        return cls._order.index(level) <= cls._order.index('read')
+
+    @classmethod
+    def can_write(cls, level):
+        return cls._order.index(level) <= cls._order.index('write')
 
 
 class Entry(abc.ABC):
@@ -32,13 +39,7 @@ class Entry(abc.ABC):
 
     @property
     def values(self):
-        def get_value(column):
-            value = self.__getattribute__(column)
-            if isinstance(value, enum.Enum):
-                return value.value
-            return value
-
-        return [get_value(column) for column in self.columns]
+        return [self.__getattribute__(column) for column in self.columns]
 
 
 @dc.dataclass
@@ -91,7 +92,7 @@ class TeamRole(Entry):
 
     team_id:      uuid.UUID
     hub_id:       uuid.UUID
-    access_level: AccessLevel
+    access_level: str
     created_at:   dt.datetime
 
     table_name = 'team_roles'

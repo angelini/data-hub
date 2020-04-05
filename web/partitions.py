@@ -1,12 +1,26 @@
 import datetime as dt
 
 import flask
+import flask_jwt_extended as flask_jwt
 
+from core.data import AccessLevel
 from core.engine import NewPartition, VersionExists
 from web.db import check_assertion, execute_action
 
 bp = flask.Blueprint('partitions', __name__,
                      url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions/<int:version>/partitions')
+
+
+@bp.before_request
+def authorize_before_request():
+    hub_id = str(flask.request.view_args['hub_id'])
+    roles = flask_jwt.get_jwt_claims()
+
+    if not AccessLevel.can_read(roles.get(str(hub_id), 'none')):
+        error = f'unauthorized access to {hub_id}'
+        if flask.request.url.endswith('html'):
+            return flask.render_template('error.html.j2', error=error), 401
+        return flask.jsonify({'error': error}), 401
 
 
 @bp.route('/new.json', methods=['POST'])

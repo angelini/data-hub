@@ -5,6 +5,7 @@ import uuid
 
 import flask
 import flask_jwt_extended as flask_jwt
+import jwt
 import psycopg2 as psql
 import psycopg2.pool
 import structlog
@@ -81,20 +82,20 @@ def create_app():
         log.info('request_start', method=flask.request.method, url=flask.request.url)
 
     exclude_authorization = [
-        'auth.login_html', 'auth.login_json', 'redirect_index', 'users.new_json',
+        'auth.login_html', 'auth.login_json', 'redirect_index', 'static', 'users.new_json',
     ]
 
     @app.before_request
     def before_request_authorization():
         rule = flask.request.url_rule
-        if rule and rule.endpoint in exclude_authorization:
+        if flask.request.path == '/favicon.ico' or (rule and rule.endpoint in exclude_authorization):
             return
 
         try:
             flask_jwt.verify_jwt_in_request()
-        except flask_jwt.exceptions.JWTExtendedException:
+        except (flask_jwt.exceptions.JWTExtendedException, jwt.ExpiredSignature):
             if flask.request.url.endswith('html'):
-                return flask.redirect(flask.url_for('auth.login_html')), 401
+                return flask.redirect(flask.url_for('auth.login_html'))
             return flask.jsonify({'error': 'missing access token'}), 401
 
     @app.after_request
