@@ -3,7 +3,7 @@ import datetime as dt
 import flask
 
 from core.engine import NewPartition, VersionExists
-from web.auth import can_read_current_hub, auth_write_current_hub
+from web.auth import auth_current_hub_reader, require_writer
 from web.db import check_assertion, execute_action
 
 bp = flask.Blueprint('partitions', __name__,
@@ -12,11 +12,11 @@ bp = flask.Blueprint('partitions', __name__,
 
 @bp.before_request
 def authorize_before_request():
-    return can_read_current_hub()
+    return auth_current_hub_reader()
 
 
 @bp.route('/new.json', methods=['POST'])
-@auth_write_current_hub
+@require_writer
 def new_json(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     data = flask.request.json
@@ -34,7 +34,7 @@ def new_json(hub_id, dataset_id, version):
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])
-@auth_write_current_hub
+@require_writer
 def new_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     if flask.request.method == 'POST':

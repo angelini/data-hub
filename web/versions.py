@@ -2,7 +2,7 @@ import flask
 
 from core.data import Backends, Types
 from core.engine import DetailVersion, ListVersions, NewDatasetVersion, PublishedVersions, PublishVersion, VersionExists
-from web.auth import can_read_current_hub, auth_write_current_hub
+from web.auth import auth_current_hub_reader, is_current_hub_writer, require_writer
 from web.db import DbException, check_assertion, fetch_view, execute_action
 
 bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions')
@@ -10,7 +10,7 @@ bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datas
 
 @bp.before_request
 def authorize_before_request():
-    return can_read_current_hub()
+    return auth_current_hub_reader()
 
 
 @bp.route('/index.json', methods=['GET'])
@@ -24,11 +24,12 @@ def index_html(hub_id, dataset_id):
     return flask.render_template('versions/index.html.j2',
                                  hub_id=hub_id,
                                  dataset_id=dataset_id,
+                                 is_writer=is_current_hub_writer(),
                                  **versions)
 
 
 @bp.route('/new.json', methods=['POST'])
-@auth_write_current_hub
+@require_writer
 def new_json(hub_id, dataset_id):
     data = flask.request.json
     version_id = execute_action(
@@ -46,7 +47,7 @@ def new_json(hub_id, dataset_id):
 
 
 @bp.route('/new.html', methods=['GET', 'POST'])
-@auth_write_current_hub
+@require_writer
 def new_html(hub_id, dataset_id):
     error = None
 
@@ -112,11 +113,12 @@ def detail_html(hub_id, dataset_id, version):
                                  hub_id=hub_id,
                                  dataset_id=dataset_id,
                                  version_int=version,
+                                 is_writer=is_current_hub_writer(),
                                  **details)
 
 
 @bp.route('/<int:version>/publish.json', methods=['POST'])
-@auth_write_current_hub
+@require_writer
 def publish_json(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))
@@ -124,7 +126,7 @@ def publish_json(hub_id, dataset_id, version):
 
 
 @bp.route('/<int:version>/publish.html', methods=['POST'])
-@auth_write_current_hub
+@require_writer
 def publish_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))

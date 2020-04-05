@@ -51,31 +51,44 @@ def login_html():
     return flask.render_template('auth/login.html.j2', error=error)
 
 
-def _auth_current_hub(test_fn):
+def is_current_hub_reader():
     hub_id = str(flask.request.view_args['hub_id'])
     roles = flask_jwt.get_jwt_claims()
+    return AccessLevel.can_read(roles.get(str(hub_id), 'none'))
 
-    if not test_fn(roles.get(str(hub_id), 'none')):
+
+def is_current_hub_writer():
+    hub_id = str(flask.request.view_args['hub_id'])
+    roles = flask_jwt.get_jwt_claims()
+    return AccessLevel.can_write(roles.get(str(hub_id), 'none'))
+
+
+def auth_current_hub_reader():
+    hub_id = str(flask.request.view_args['hub_id'])
+
+    if not is_current_hub_reader():
         error = f'unauthorized access to {hub_id}'
         if flask.request.url.endswith('html'):
             return flask.render_template('error.html.j2', error=error), 401
         return flask.jsonify({'error': error}), 401
 
 
-def can_read_current_hub():
-    return _auth_current_hub(AccessLevel.can_read)
+def auth_current_hub_writer():
+    hub_id = str(flask.request.view_args['hub_id'])
+
+    if not is_current_hub_writer():
+        error = f'unauthorized access to {hub_id}'
+        if flask.request.url.endswith('html'):
+            return flask.render_template('error.html.j2', error=error), 401
+        return flask.jsonify({'error': error}), 401
 
 
-def can_write_current_hub():
-    return _auth_current_hub(AccessLevel.can_write)
-
-
-def auth_write_current_hub(fn):
+def require_writer(fn):
     @wraps(fn)
-    def check_write_permission(*args, **kwargs):
-        error = can_write_current_hub()
+    def check_access(*args, **kwargs):
+        error = auth_current_hub_writer()
         if error:
             return error
         return fn(*args, **kwargs)
 
-    return check_write_permission
+    return check_access

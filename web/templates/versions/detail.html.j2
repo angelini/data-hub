@@ -80,7 +80,9 @@
           <span class="uk-text-large">Partitions</span>
         </div>
         <div>
-          <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+          {% if is_writer %}
+            <a class="add-row uk-icon-link"><span class="uk-padding uk-padding-remove-vertical" uk-icon="plus"></span></a>
+          {% endif %}
         </div>
       </div>
       <table class="uk-table uk-table-hover">
