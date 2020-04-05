@@ -64,6 +64,7 @@ def new_user(email, password):
         auth=False
     )['user_id']
 
+
 def new_team(name):
     return post(
         'teams/new.json',
@@ -77,11 +78,19 @@ def new_team_member(team_id, user_id):
         {'user_id': user_id},
     )['member_id']
 
+
 def new_hub(name, team_id):
-    return post(
+    global get_access_token
+
+    hub_id = post(
         'hubs/new.json',
         {'name': name, 'team_id': team_id},
     )['hub_id']
+
+    # Refresh the auth token after creating a new hub
+    get_access_token = get_access_token_builder()
+
+    return hub_id
 
 
 def new_dataset(hub_id, name):

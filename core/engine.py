@@ -375,15 +375,15 @@ class DetailUser(View):
             FROM
                 current_team_roles_with_name rol
             INNER JOIN
-                user_teams usr
+                team_members tms
             ON
-                rol.team_id = usr.team_id
+                rol.team_id = tms.team_id
         ''', (user_id, ))
         roles = {}
         for row in cursor.fetchall():
             hub_id = str(row[0])
             if hub_id in roles:
-                roles[hub_id] = AccessLevel.preferred_level_raw(roles[hub_id], row[1])
+                roles[hub_id] = AccessLevel.highest_level(roles[hub_id], row[1])
             else:
                 roles[hub_id] = row[1]
 
@@ -391,6 +391,7 @@ class DetailUser(View):
             'user_id': user_id,
             'roles': roles,
         }
+
 
 @dc.dataclass
 class DetailTeam(View):

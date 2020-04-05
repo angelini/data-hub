@@ -1,5 +1,5 @@
 .PHONY: check-venv check-web
-.PHONY: install reset example web web-prod
+.PHONY: install reset example web web-prod psql
 .PHONY: nginx nginx-reload
 
 UIKIT_VERSION := 3.3.7
@@ -89,6 +89,9 @@ web-prod: export FLASK_APP=web
 web-prod: export FLASK_ENV=production
 web-prod:
 	gunicorn -w 3 -b 127.0.0.1:5000 wsgi:app
+
+psql:
+	psql
 
 nginx.conf: check-venv config/templates/nginx.conf.j2
 	python config/generate.py
