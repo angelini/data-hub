@@ -33,14 +33,38 @@ function drawDependencies(container, dependencies) {
 
     let render = new dagreD3.render();
     render(container, g);
+    return g
+}
+
+function centerGraph(g, svg, zoom) {
+    let margin = 40;
+    let svgWidth = svg.node().clientWidth;
+    let graphSize = {width: g.graph().width, height: g.graph().height};
+
+    let scale = Math.min(1, (svgWidth - margin) / graphSize.width);
+
+    svg.call(zoom.transform, d3.zoomIdentity.translate(
+        (svgWidth - graphSize.width * scale) / 2, 20
+    ).scale(scale));
+
+    if (!svg.attr('height')) {
+        svg.attr('height', graphSize.height * scale + margin);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    let container = document.getElementById('dependencies');
     let svg = d3.select('#dependencies svg');
     let inner = svg.select('g');
+
     let zoom = d3.zoom().on('zoom', () => {
         inner.attr('transform', d3.event.transform);
     });
-    svg.call(zoom);
-    drawDependencies(inner, versionDependencies);
+    if (container.classList.contains('full')) {
+        svg.call(zoom);
+    }
+
+    let g = drawDependencies(inner, versionDependencies);
+
+    centerGraph(g, svg, zoom);
 });

@@ -7,6 +7,8 @@
 {% endblock %}
 
 {% block content %}
+  <h1 class="uk-heading-small uk-text-capitalize">{{ name }}</h1>
+
   <div class="uk-container-small">
     <table class="uk-table uk-table-hover">
       <tbody>
@@ -69,7 +71,9 @@
   {% if dependencies %}
     <span class="uk-text-large">Dependencies</span>
     <div id="dependencies" class="uk-padding">
-      <svg><g/></svg>
+      <a href="{{ url_for('versions.dependencies_html', hub_id=hub_id, dataset_id=dataset_id, version=version.version) }}">
+        <svg><g/></svg>
+      </a>
     </div>
   {% endif %}
 

@@ -91,7 +91,7 @@ web-prod:
 	gunicorn -w 3 -b 127.0.0.1:5000 wsgi:app
 
 psql:
-	psql
+	psql $(ARGS)
 
 nginx.conf: check-venv config/templates/nginx.conf.j2
 	python config/generate.py

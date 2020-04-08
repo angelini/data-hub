@@ -1,3 +1,4 @@
+import datetime as dt
 import logging
 import time
 import sys
@@ -47,6 +48,7 @@ def create_app():
     app.config['JWT_TOKEN_LOCATION'] = ('headers', 'cookies')
     app.config['JWT_COOKIE_SECURE'] = False
     app.config['JWT_COOKIE_CSRF_PROTECT'] = False
+    app.config['JWT_ACCESS_TOKEN_EXPIRES'] = dt.timedelta(hours=12)
 
     app.config['db_pool'] = psql.pool.SimpleConnectionPool(1, 20, '')
 
@@ -72,6 +74,9 @@ def create_app():
 
     from . import partitions
     app.register_blueprint(partitions.bp)
+
+    from . import connections
+    app.register_blueprint(connections.bp)
 
     app.jinja_env.filters['datetime'] = format_datetime
 

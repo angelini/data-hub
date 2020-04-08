@@ -1,0 +1,20 @@
+{% extends 'base.html.j2' %}
+
+{% block nav %}
+  <li class="uk-parent"><a href="{{ url_for('hubs.index_html') }}" class="pure-menu-link">Hubs</a></li>
+  <li class="uk-parent"><a href="{{ url_for('datasets.index_html', hub_id=hub_id) }}" class="pure-menu-link">Datasets</a></li>
+  <li class="uk-active"><a href="{{ url_for('versions.detail_html', hub_id=hub_id, dataset_id=dataset_id, version=version.version) }}" class="pure-menu-link">Versions</a></li>
+{% endblock %}
+
+{% block content %}
+  <div id="dependencies" class="full uk-padding">
+    <svg height="500"><g/></svg>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="text/javascript">
+    const versionDependencies = {{ dependencies | tojson | safe }};
+  </script>
+  <script src="{{ url_for('static', filename='drawDependencies.js') }}"></script>
+{% endblock %}

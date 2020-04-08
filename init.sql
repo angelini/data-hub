@@ -210,12 +210,14 @@ CREATE INDEX partitions_values_idx ON partitions USING gin(partition_values);
 CREATE INDEX version_partitions_idx ON partitions(hub_id, dataset_id, version);
 
 CREATE TABLE IF NOT EXISTS connectors (
-    id uuid,
+    id int,
 
+    name   text  NOT NULL,
     module text  NOT NULL,
     config jsonb,
 
     PRIMARY KEY (id),
+    CONSTRAINT name_length CHECK (char_length(name) >= 1 AND char_length(name) < 1028),
     CONSTRAINT valid_python_module CHECK (module ~ '^[A-Za-z_][A-Za-z0-9_.]*')
 );
 
@@ -224,13 +226,12 @@ CREATE TABLE IF NOT EXISTS connections (
 
     hub_id       uuid        NOT NULL,
     dataset_id   uuid        NOT NULL,
-    version      int         NOT NULL,
-    connector_id uuid        NOT NULL,
+    connector_id int         NOT NULL,
     path         text        NOT NULL,
     created_at   timestamptz NOT NULL,
 
     PRIMARY KEY (id),
-    FOREIGN KEY (hub_id, dataset_id, version) REFERENCES dataset_versions(hub_id, dataset_id, version),
+    FOREIGN KEY (hub_id, dataset_id) REFERENCES datasets(hub_id, id),
     FOREIGN KEY (connector_id) REFERENCES connectors(id)
 );
 
@@ -401,3 +402,19 @@ CREATE OR REPLACE VIEW partitions_with_last_end_time AS
         ) last_end_time
     FROM
         partitions par;
+
+
+CREATE OR REPLACE VIEW connections_with_connector_name AS
+    SELECT
+        cns.hub_id,
+        cns.dataset_id,
+        cns.connector_id,
+        ctr.name AS connector_name,
+        cns.path,
+        cns.created_at
+    FROM
+        connections as cns
+    INNER JOIN
+        connectors as ctr
+    ON
+        cns.connector_id = ctr.id;

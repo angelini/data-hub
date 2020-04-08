@@ -1,7 +1,7 @@
 import psycopg2 as psql
 import psycopg2.extras
 
-from core.data import Hub, Dataset, Backend, Backends, DatasetVersion, \
+from core.data import Hub, Dataset, Backend, Backends, Connectors, DatasetVersion, \
     PublishedVersion, Type, Types, Column, Partition, write
 
 psql.extras.register_uuid()
@@ -22,6 +22,9 @@ if __name__ == '__main__':
         write(cursor, entry)
 
     for entry in Backends:
+        write(cursor, entry)
+
+    for entry in Connectors:
         write(cursor, entry)
 
     conn.commit()

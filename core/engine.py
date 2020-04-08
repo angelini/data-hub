@@ -11,7 +11,7 @@ import psycopg2 as psql
 import pytz
 import structlog
 
-from core.data import AccessLevel, Backend, Column, Dataset, DatasetVersion, Dependency, Hub, \
+from core.data import AccessLevel, Backend, Column, Connection, Dataset, DatasetVersion, Dependency, Hub, \
     Partition, PublishedVersion, Team, TeamMember, TeamRole, Type, User, write
 
 pwd_context = passlib.context.CryptContext(schemes=['argon2'])
@@ -166,7 +166,6 @@ class NewPartition(Action):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
     version:    int
-
     path:       str
     values:     t.List[str]
     row_count:  t.Optional[int]
@@ -187,6 +186,24 @@ class NewPartition(Action):
                                 dt.datetime.now(tz=pytz.utc),
                                 None))
         return partition_id
+
+
+@dc.dataclass
+class NewConnection(Action):
+    hub_id:       uuid.UUID
+    dataset_id:   uuid.UUID
+    connector_id: uuid.UUID
+    path:         str
+
+    def _execute(self, cursor):
+        connection_id = uuid.uuid4()
+        write(cursor, Connection(connection_id,
+                                 self.hub_id,
+                                 self.dataset_id,
+                                 self.connector_id,
+                                 self.path,
+                                 dt.datetime.now(tz=pytz.utc)))
+        return connection_id
 
 
 @dc.dataclass
@@ -447,6 +464,70 @@ class DetailTeam(View):
             'members': members,
             'roles': roles,
             'users': users,
+        }
+
+
+@dc.dataclass
+class DetailHub(View):
+    hub_id: uuid.UUID
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT name
+            FROM hubs
+            WHERE id = %s
+        ''', (self.hub_id, ))
+        row = cursor.fetchone()
+        return {
+            'name': row[0]
+        }
+
+
+@dc.dataclass
+class DetailDataset(View):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT id, name
+            FROM connectors
+            ORDER BY id
+        ''')
+        connectors = [{
+            'id': row[0],
+            'name': row[1],
+        } for row in cursor.fetchall()]
+
+        cursor.execute('''
+            SELECT
+                connector_id,
+                connector_name,
+                path
+            FROM
+                connections_with_connector_name
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            ORDER BY
+                created_at DESC
+        ''', (self.hub_id, self.dataset_id))
+        connections = [{
+            'connector_id': row[0],
+            'connector_name': row[1],
+            'path': row[2],
+        } for row in cursor.fetchall()]
+
+        cursor.execute('''
+            SELECT name
+            FROM datasets
+            WHERE id = %s
+        ''', (self.dataset_id, ))
+        row = cursor.fetchone()
+        return {
+            'name': row[0],
+            'connectors': connectors,
+            'connections': connections,
         }
 
 
@@ -778,6 +859,24 @@ class TeamExists(Assertion):
 
 
 @dc.dataclass
+class DatasetExists(Assertion):
+    dataset_id: uuid.UUID
+
+    status_code = 404
+
+    def _check(self, cursor):
+        cursor.execute('''
+            SELECT 1
+            FROM datasets
+            WHERE id = %s
+        ''', (self.dataset_id, ))
+        return cursor.rowcount == 1
+
+    def message(self):
+        return f'Dataset {self.dataset_id} does not exist'
+
+
+@dc.dataclass
 class VersionExists(Assertion):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
@@ -799,7 +898,7 @@ class VersionExists(Assertion):
         return cursor.rowcount == 1
 
     def message(self):
-        return f'{self.hub_id}::{self.dataset_id}::{self.version} does not exist'
+        return f'Version {self.hub_id}::{self.dataset_id}::{self.version} does not exist'
 
 
 @dc.dataclass
