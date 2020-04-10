@@ -1,5 +1,6 @@
 .PHONY: check-venv check-web
 .PHONY: install reset example web web-prod psql
+.PHONY: worker insert-job
 .PHONY: nginx nginx-reload
 
 UIKIT_VERSION := 3.3.7
@@ -70,7 +71,7 @@ python-deps: check-venv requirements.txt
 
 install: check-venv uikit datatables d3 dagre python-deps
 
-reset:
+reset: check-venv
 	psql -a -1 -v ON_ERROR_STOP=1 -f init.sql
 	python core/reset.py
 
@@ -89,6 +90,12 @@ web-prod: export FLASK_APP=web
 web-prod: export FLASK_ENV=production
 web-prod:
 	gunicorn -w 3 -b 127.0.0.1:5000 wsgi:app
+
+worker: check-venv
+	python worker/loop.py
+
+insert-job: check-venv
+	python worker/insert.py
 
 psql:
 	psql $(ARGS)

@@ -1,3 +1,4 @@
+import pq
 import psycopg2 as psql
 import psycopg2.extras
 
@@ -13,6 +14,8 @@ def truncate(cursor, kind):
 
 if __name__ == '__main__':
     conn = psql.connect('')
+    pq.PQ(conn=conn).create()
+
     cursor = conn.cursor()
 
     for kind in [Hub, Dataset, Backend, DatasetVersion, PublishedVersion, Type, Column, Partition]:
