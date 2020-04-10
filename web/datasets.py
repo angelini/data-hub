@@ -1,6 +1,6 @@
 import flask
 
-from core.engine import ListDatasets, NewDataset
+from core.engine import DetailHub, ListDatasets, NewDataset
 from web.auth import auth_current_hub_reader, is_current_hub_writer, require_writer
 from web.db import DbException, fetch_view, execute_action
 
@@ -19,9 +19,11 @@ def index_json(hub_id):
 
 @bp.route('/index.html', methods=['GET'])
 def index_html(hub_id):
+    details = fetch_view(DetailHub(hub_id))
     return flask.render_template('datasets/index.html.j2',
                                  hub_id=hub_id,
                                  is_writer=is_current_hub_writer(),
+                                 **details,
                                  **fetch_view(ListDatasets(hub_id)))
 
 

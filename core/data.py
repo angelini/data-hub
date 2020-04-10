@@ -1,6 +1,7 @@
 import abc
 import dataclasses as dc
 import datetime as dt
+import json
 import pathlib as pl
 import typing as t
 import uuid
@@ -39,7 +40,13 @@ class Entry(abc.ABC):
 
     @property
     def values(self):
-        return [self.__getattribute__(column) for column in self.columns]
+        def get_value(column):
+            value = self.__getattribute__(column)
+            if isinstance(value, dict):
+                return json.dumps(value)
+            return value
+
+        return [get_value(column) for column in self.columns]
 
 
 @dc.dataclass
@@ -220,7 +227,7 @@ class Column(Entry):
 
 @dc.dataclass
 class Partition(Entry):
-    id:         uuid.UUID
+    id: uuid.UUID
 
     hub_id:           uuid.UUID
     dataset_id:       uuid.UUID
@@ -234,6 +241,48 @@ class Partition(Entry):
     deleted_at:       t.Optional[dt.datetime]
 
     table_name = 'partitions'
+
+
+@dc.dataclass
+class Connector(Entry):
+    id: int
+
+    name:   str
+    module: str
+    config: t.Dict[str, t.Any]
+
+    table_name = 'connectors'
+
+
+LocalPostgres = Connector(1, 'Local Postgres', 'connectors.postgres', {
+    'host': 'localhost',
+    'db': 'default',
+    'user': 'postgres'
+})
+
+LocalMySQL = Connector(2, 'Local MySQL', 'connectors.mysql', {
+    'host': 'localhost',
+    'db': 'default',
+    'user': 'mysql'
+})
+
+Connectors = [
+    LocalPostgres,
+    LocalMySQL,
+]
+
+
+@dc.dataclass
+class Connection(Entry):
+    id: uuid.UUID
+
+    hub_id:       uuid.UUID
+    dataset_id:   uuid.UUID
+    connector_id: int
+    path:         str
+    created_at:   dt.datetime
+
+    table_name = 'connections'
 
 
 def write(cursor, entry):
