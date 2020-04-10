@@ -6,6 +6,7 @@ import pathlib as pl
 import uuid
 import typing as t
 
+import jinja2 as jinja
 import passlib.context
 import psycopg2 as psql
 import pytz
@@ -501,11 +502,12 @@ class DetailDataset(View):
 
         cursor.execute('''
             SELECT
+                id,
                 connector_id,
                 connector_name,
                 path
             FROM
-                connections_with_connector_name
+                connections_with_connector
             WHERE
                 hub_id = %s
             AND dataset_id = %s
@@ -513,9 +515,10 @@ class DetailDataset(View):
                 created_at DESC
         ''', (self.hub_id, self.dataset_id))
         connections = [{
-            'connector_id': row[0],
-            'connector_name': row[1],
-            'path': row[2],
+            'id': row[0],
+            'connector_id': row[1],
+            'connector_name': row[2],
+            'path': row[3],
         } for row in cursor.fetchall()]
 
         cursor.execute('''
@@ -766,6 +769,22 @@ class DetailVersion(View):
             'columns': columns,
             'partitions': partitions,
             'dependencies': dependencies,
+        }
+
+
+@dc.dataclass
+class RenderConnection(View):
+    connection_id: uuid.UUID
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT connector_config, connector_template, path
+            FROM connections_with_connector
+            WHERE id = %s
+        ''', (self.connection_id, ))
+        row = cursor.fetchone()
+        return {
+            'connection': jinja.Template(row[1]).render(path=row[2], **row[0]),
         }
 
 

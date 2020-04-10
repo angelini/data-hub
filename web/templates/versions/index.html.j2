@@ -32,6 +32,7 @@
           <tr>
             <th>Connector</th>
             <th>Path</th>
+            <th>Example</th>
           </tr>
         </thead>
         <tbody>
@@ -54,11 +55,17 @@
                 </div>
               </div>
             </td>
+            <td></td>
           </tr>
           {% for connection in connections %}
             <tr>
               <td>{{ connection.connector_name }}</td>
               <td>{{ connection.path }}</td>
+              <td>
+                <a class="uk-icon-link" href="{{ url_for('connections.render_html', hub_id=hub_id, dataset_id=dataset_id, connection_id=connection.id) }}">
+                  <span uk-icon="expand"></span>
+                </a>
+              </td>
             </tr>
           {% endfor %}
         </tbody>

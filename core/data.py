@@ -247,24 +247,28 @@ class Partition(Entry):
 class Connector(Entry):
     id: int
 
-    name:   str
-    module: str
-    config: t.Dict[str, t.Any]
+    name:     str
+    config:   t.Dict[str, t.Any]
+    template: str
 
     table_name = 'connectors'
 
 
-LocalPostgres = Connector(1, 'Local Postgres', 'connectors.postgres', {
+LocalPostgres = Connector(1, 'Local Postgres', {
     'host': 'localhost',
     'db': 'default',
     'user': 'postgres'
-})
+}, '''
+psql -h '{{ host }}' -d '{{ db }}' -U '{{ user }}' -c 'SELECT * FROM {{ path }}'
+''')
 
-LocalMySQL = Connector(2, 'Local MySQL', 'connectors.mysql', {
+LocalMySQL = Connector(2, 'Local MySQL', {
     'host': 'localhost',
     'db': 'default',
     'user': 'mysql'
-})
+}, '''
+mysql -h '{{ host }}' -u '{{ user }}' -p -e 'SELECT * FROM {{ path }}' {{ db }}
+''')
 
 Connectors = [
     LocalPostgres,

@@ -212,13 +212,12 @@ CREATE INDEX version_partitions_idx ON partitions(hub_id, dataset_id, version);
 CREATE TABLE IF NOT EXISTS connectors (
     id int,
 
-    name   text  NOT NULL,
-    module text  NOT NULL,
-    config jsonb,
+    name     text  NOT NULL,
+    config   jsonb,
+    template text  NOT NULL,
 
     PRIMARY KEY (id),
-    CONSTRAINT name_length CHECK (char_length(name) >= 1 AND char_length(name) < 1028),
-    CONSTRAINT valid_python_module CHECK (module ~ '^[A-Za-z_][A-Za-z0-9_.]*')
+    CONSTRAINT name_length CHECK (char_length(name) >= 1 AND char_length(name) < 1028)
 );
 
 CREATE TABLE IF NOT EXISTS connections (
@@ -404,12 +403,15 @@ CREATE OR REPLACE VIEW partitions_with_last_end_time AS
         partitions par;
 
 
-CREATE OR REPLACE VIEW connections_with_connector_name AS
+CREATE OR REPLACE VIEW connections_with_connector AS
     SELECT
+        cns.id,
         cns.hub_id,
         cns.dataset_id,
         cns.connector_id,
         ctr.name AS connector_name,
+        ctr.config AS connector_config,
+        ctr.template AS connector_template,
         cns.path,
         cns.created_at
     FROM

@@ -112,7 +112,7 @@ def detail_json(hub_id, dataset_id, version):
 @bp.route('/<int:version>/detail.html', methods=['GET'])
 def detail_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
-    dataset_details = fetch_view(DetailDataset(dataset_id))
+    dataset_details = fetch_view(DetailDataset(hub_id, dataset_id))
     details = fetch_view(DetailVersion(hub_id, dataset_id, version))
     return flask.render_template('versions/detail.html.j2',
                                  hub_id=hub_id,
