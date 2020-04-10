@@ -2,9 +2,9 @@ import flask
 
 from core.data import Backends, Types
 from core.engine import DatasetExists, DetailDataset, DetailVersion, ListVersions, NewDatasetVersion, \
-    PublishedVersions, PublishVersion, VersionExists
+    PublishedVersions, PublishVersion, SetQueuedPartitionStatus, VersionBackendId, VersionExists
 from web.auth import auth_current_hub_reader, is_current_hub_writer, require_writer
-from web.db import DbException, check_assertion, fetch_view, execute_action
+from web.db import DbException, check_assertion, fetch_view, enqueue_job, execute_action
 
 bp = flask.Blueprint('versions', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets/<uuid:dataset_id>/versions')
 
@@ -149,3 +149,29 @@ def publish_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(PublishVersion(hub_id, dataset_id, version))
     return flask.redirect(flask.url_for('versions.index_html', hub_id=hub_id, dataset_id=dataset_id))
+
+
+@bp.route('/<int:version>/verify.json', methods=['POST'])
+def verify_json(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
+    execute_action(SetQueuedPartitionStatus(hub_id, dataset_id, version))
+    backend_id = fetch_view(VersionBackendId(hub_id, dataset_id, version))
+    queue_id = enqueue_job(backend_id, 'verify_partitions', {
+        'hub_id': str(hub_id),
+        'dataset_id': str(dataset_id),
+        'version': str(version)
+    })
+    return flask.jsonify({'queue_id': queue_id})
+
+
+@bp.route('/<int:version>/verify.html', methods=['POST'])
+def verify_html(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
+    execute_action(SetQueuedPartitionStatus(hub_id, dataset_id, version))
+    backend_id = fetch_view(VersionBackendId(hub_id, dataset_id, version))
+    enqueue_job(backend_id, 'verify_partitions', {
+        'hub_id': str(hub_id),
+        'dataset_id': str(dataset_id),
+        'version': str(version)
+    })
+    return flask.redirect(flask.url_for('versions.detail_html', hub_id=hub_id, dataset_id=dataset_id, version=version))

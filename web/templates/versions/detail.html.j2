@@ -101,7 +101,9 @@
             <th>End Time</th>
             {% if partitions %}
               <th>Created At</th>
+              <th>Status</th>
             {% else %}
+              <th class="uk-width-small"></th>
               <th class="uk-width-small"></th>
             {% endif %}
           </tr>
@@ -143,6 +145,7 @@
                 </div>
               </div>
             </td>
+            <td></td>
           </tr>
           {% for partition in partitions %}
             <tr>
@@ -154,6 +157,17 @@
               <td>{{ partition.start_time | datetime }}</td>
               <td>{{ partition.end_time | datetime }}</td>
               <td>{{ partition.created_at | datetime }}</td>
+              <td>
+                {% if partition.status == 'ok' %}
+                  <span uk-icon="check"></span></a>
+                {% elif partition.status == 'error' %}
+                  <span uk-icon="warning"></span></a>
+                {% elif partition.status == 'queued' %}
+                  <span uk-icon="refresh"></span></a>
+                {% else %}
+                  <span uk-icon="question"></span></a>
+                {% endif %}
+              </td>
             </tr>
           {% endfor %}
         </tbody>

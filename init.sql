@@ -17,12 +17,14 @@ DROP TABLE IF EXISTS types              CASCADE;
 DROP TABLE IF EXISTS dependencies       CASCADE;
 DROP TABLE IF EXISTS published_versions CASCADE;
 DROP TABLE IF EXISTS partitions         CASCADE;
+DROP TABLE IF EXISTS partition_statuses CASCADE;
 DROP TABLE IF EXISTS connectors         CASCADE;
 DROP TABLE IF EXISTS connections        CASCADE;
 
 DROP TABLE IF EXISTS queue CASCADE;
 
 DROP TYPE IF EXISTS access_level CASCADE;
+DROP TYPE IF EXISTS status CASCADE;
 
 CREATE TABLE IF NOT EXISTS users (
     id uuid,
@@ -210,6 +212,18 @@ CREATE TABLE IF NOT EXISTS partitions (
 
 CREATE INDEX partitions_values_idx ON partitions USING gin(partition_values);
 CREATE INDEX version_partitions_idx ON partitions(hub_id, dataset_id, version);
+
+CREATE TYPE status AS ENUM ('queued', 'ok', 'error', 'unknown');
+
+CREATE TABLE IF NOT EXISTS partition_statuses (
+    partition_id uuid,
+
+    status     status      NOT NULL,
+    updated_at timestamptz NOT NULL,
+
+    PRIMARY KEY (partition_id),
+    FOREIGN KEY (partition_id) REFERENCES partitions(id)
+);
 
 CREATE TABLE IF NOT EXISTS connectors (
     id int,
@@ -404,6 +418,28 @@ CREATE OR REPLACE VIEW partitions_with_last_end_time AS
     FROM
         partitions par;
 
+CREATE OR REPLACE VIEW partitions_with_status AS
+    SELECT
+        par.hub_id,
+        par.dataset_id,
+        par.version,
+        par.partition_values,
+        par.path,
+        par.row_count,
+        par.start_time,
+        par.end_time,
+        par.created_at,
+        CASE WHEN pst.status IS NULL
+            THEN 'unknown'
+            ELSE pst.status
+        END AS status,
+        pst.updated_at
+    FROM
+        partitions par
+    LEFT JOIN
+        partition_statuses pst
+    ON
+        par.id = pst.partition_id;
 
 CREATE OR REPLACE VIEW connections_with_connector AS
     SELECT

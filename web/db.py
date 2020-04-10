@@ -22,13 +22,13 @@ class AssertionFailure(Exception):
 def connect():
     if 'db' not in flask.g:
         flask.g.db = flask.current_app.config['db_pool'].getconn()
-        flask.g.queue = pq.PQ(conn=flask.g.db)
+        flask.g.queue = pq.PQ(conn=flask.g.db)['jobs']
     return flask.g.db
 
 
 def enqueue_job(backend_id, action, config):
     connect()
-    flask.g.queue.put(Job(backend_id, action, config).__dict__)
+    return flask.g.queue.put(Job(backend_id, action, config).__dict__)
 
 
 def fetch_view(view):

@@ -1,38 +1,53 @@
 import abc
 import dataclasses as dc
 import datetime as dt
+import enum
 import json
 import pathlib as pl
 import typing as t
 import uuid
 
 
-class AccessLevel:
+class AccessLevel(enum.Enum):
     ADMIN = 'admin'
     WRITER = 'writer'
     READER = 'reader'
     NONE = 'none'
 
-    _order = [ADMIN, WRITER, READER, NONE]
-
     @classmethod
     def highest_level(cls, *args):
-        for level in cls._order:
+        for level in AccessLevelOrder:
             if level in args:
                 return level
-        return 'none'
+        return AccessLevel.NONE.value
 
     @classmethod
     def can_read(cls, level):
-        return cls._order.index(level) <= cls._order.index('reader')
+        return AccessLevelOrder.index(level) <= AccessLevelOrder.index('reader')
 
     @classmethod
     def can_write(cls, level):
-        return cls._order.index(level) <= cls._order.index('writer')
+        return AccessLevelOrder.index(level) <= AccessLevelOrder.index('writer')
+
+
+AccessLevelOrder = [
+    AccessLevel.ADMIN.value,
+    AccessLevel.WRITER.value,
+    AccessLevel.READER.value,
+    AccessLevel.NONE.value,
+]
+
+
+class Status(enum.Enum):
+    OK = 'ok'
+    ERROR = 'error'
+    QUEUED = 'queued'
+    UNKNOWN = 'unknown'
 
 
 class Entry(abc.ABC):
-    table_name: str
+    table_name:   str
+    primary_keys: t.Tuple[str]
 
     @property
     def columns(self):
@@ -48,6 +63,20 @@ class Entry(abc.ABC):
 
         return [get_value(column) for column in self.columns]
 
+    @property
+    def secondary_columns(self):
+        return [column
+                for column in self.columns
+                if column not in self.primary_keys]
+
+    @property
+    def secondary_values(self):
+        indexes = [idx
+                   for idx, column in enumerate(self.columns)
+                   if column not in self.primary_keys]
+        return [value
+                for idx, value in enumerate(self.values)
+                if idx in indexes]
 
 @dc.dataclass
 class User(Entry):
@@ -58,6 +87,7 @@ class User(Entry):
     created_at:    dt.datetime
 
     table_name = 'users'
+    primary_keys = ('id', )
 
 
 @dc.dataclass
@@ -68,6 +98,7 @@ class Team(Entry):
     created_at: dt.datetime
 
     table_name = 'teams'
+    primary_keys = ('id', )
 
 
 @dc.dataclass
@@ -80,6 +111,7 @@ class TeamMember(Entry):
     deleted_at: t.Optional[dt.datetime]
 
     table_name = 'team_members'
+    primary_keys = ('id', )
 
 
 @dc.dataclass
@@ -91,6 +123,7 @@ class Hub(Entry):
     created_at: dt.datetime
 
     table_name = 'hubs'
+    primary_keys = ('id', )
 
 
 @dc.dataclass
@@ -103,6 +136,7 @@ class TeamRole(Entry):
     created_at:   dt.datetime
 
     table_name = 'team_roles'
+    primary_keys = ('id', )
 
 
 @dc.dataclass
@@ -115,6 +149,7 @@ class Dataset(Entry):
     deleted_at: t.Optional[dt.datetime]
 
     table_name = 'datasets'
+    primary_keys = ('hub_id', 'id')
 
 
 @dc.dataclass
@@ -124,6 +159,7 @@ class Backend(Entry):
     module: str
 
     table_name = 'backends'
+    primary_keys = ('id', )
 
     @staticmethod
     def by_module(module):
@@ -156,6 +192,7 @@ class DatasetVersion(Entry):
     created_at:     dt.datetime
 
     table_name = 'dataset_versions'
+    primary_keys = ('hub_id', 'dataset_id', 'version')
 
 
 @dc.dataclass
@@ -168,6 +205,10 @@ class Dependency(Entry):
     child_version:     int
 
     table_name = 'dependencies'
+    primary_keys = (
+        'parent_hub_id', 'parent_dataset_id', 'parent_version',
+        'child_hub_id', 'child_dataset_id', 'child_version',
+    )
 
 
 @dc.dataclass
@@ -179,6 +220,7 @@ class PublishedVersion(Entry):
     published_at: dt.datetime
 
     table_name = 'published_versions'
+    primary_keys = ('hub_id', 'dataset_id', 'version')
 
 
 @dc.dataclass
@@ -188,6 +230,7 @@ class Type(Entry):
     name:      str
 
     table_name = 'types'
+    primary_keys = ('id', )
 
     @staticmethod
     def by_name(name):
@@ -223,6 +266,7 @@ class Column(Entry):
     has_pii:     bool
 
     table_name = 'columns'
+    primary_keys = ('hub_id', 'dataset_id', 'version', 'name')
 
 
 @dc.dataclass
@@ -241,6 +285,18 @@ class Partition(Entry):
     deleted_at:       t.Optional[dt.datetime]
 
     table_name = 'partitions'
+    primary_keys = ('id', )
+
+
+@dc.dataclass
+class PartitionStatus(Entry):
+    partition_id: uuid.UUID
+
+    status:     str
+    updated_at: dt.datetime
+
+    table_name = 'partition_statuses'
+    primary_keys = ('partition_id', )
 
 
 @dc.dataclass
@@ -252,6 +308,7 @@ class Connector(Entry):
     template: str
 
     table_name = 'connectors'
+    primary_keys = ('id', )
 
 
 LocalPostgres = Connector(1, 'Local Postgres', {
@@ -287,6 +344,7 @@ class Connection(Entry):
     created_at:   dt.datetime
 
     table_name = 'connections'
+    primary_keys = ('id', )
 
 
 def write(cursor, entry):
@@ -294,3 +352,13 @@ def write(cursor, entry):
                    f'({", ".join(entry.columns)}) '
                    f'VALUES ({", ".join(["%s" for _ in entry.columns])})',
                    entry.values)
+
+
+def upsert(cursor, entry):
+    cursor.execute(f'INSERT INTO {entry.table_name} '
+                   f'({", ".join(entry.columns)}) '
+                   f'VALUES ({", ".join(["%s" for _ in entry.columns])}) '
+                   f'ON CONFLICT ({", ".join(entry.primary_keys)}) '
+                   f'DO UPDATE '
+                   f'SET {", ".join([col + "=%s" for col in entry.secondary_columns])}',
+                   entry.values + entry.secondary_values)

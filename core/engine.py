@@ -13,7 +13,8 @@ import pytz
 import structlog
 
 from core.data import AccessLevel, Backend, Column, Connection, Dataset, DatasetVersion, Dependency, Hub, \
-    Partition, PublishedVersion, Team, TeamMember, TeamRole, Type, User, write
+    Partition, PartitionStatus, PublishedVersion, Status, Team, TeamMember, TeamRole, Type, User, \
+    write, upsert
 
 pwd_context = passlib.context.CryptContext(schemes=['argon2'])
 
@@ -88,7 +89,7 @@ class NewHub(Action):
         write(cursor, Hub(hub_id, self.team_id, self.name, created_at))
 
         team_role_id = uuid.uuid4()
-        write(cursor, TeamRole(team_role_id, self.team_id, hub_id, AccessLevel.ADMIN, created_at))
+        write(cursor, TeamRole(team_role_id, self.team_id, hub_id, AccessLevel.ADMIN.value, created_at))
 
         return hub_id
 
@@ -217,6 +218,38 @@ class PublishVersion(Action):
         write(cursor, PublishedVersion(self.hub_id,
                                        self.dataset_id,
                                        self.version,
+                                       dt.datetime.now(tz=pytz.utc)))
+
+
+@dc.dataclass
+class SetQueuedPartitionStatus(Action):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def _execute(self, cursor):
+        cursor.execute('''
+            SELECT id
+            FROM partitions
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+        ''', (self.hub_id, self.dataset_id, self.version))
+        for row in cursor.fetchall():
+            upsert(cursor, PartitionStatus(row[0],
+                                           Status.QUEUED.value,
+                                           dt.datetime.now(tz=pytz.utc)))
+
+
+@dc.dataclass
+class UpdatePartitionStatus(Action):
+    partition_id: uuid.UUID
+    status:       Status
+
+    def _execute(self, cursor):
+        upsert(cursor, PartitionStatus(self.partition_id,
+                                       self.status.value,
                                        dt.datetime.now(tz=pytz.utc)))
 
 
@@ -363,6 +396,33 @@ class ListVersions(View):
                     'description': row[3],
                     'created_at': row[4],
                     'published': row[5],
+                }
+                for row in cursor.fetchall()
+            ]
+        }
+
+
+@dc.dataclass
+class ListPartitions(View):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT id, path
+            FROM partitions
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+            ORDER BY created_at DESC
+        ''', (self.hub_id, self.dataset_id, self.version))
+        return {
+            'partitions': [
+                {
+                    'id': row[0],
+                    'path': row[1],
                 }
                 for row in cursor.fetchall()
             ]
@@ -560,13 +620,22 @@ class DetailVersion(View):
         } for row in cursor.fetchall()]
 
         cursor.execute('''
-            SELECT partition_values, path, row_count, start_time, end_time, created_at
-            FROM partitions
+            SELECT
+                partition_values,
+                path,
+                row_count,
+                start_time,
+                end_time,
+                created_at,
+                status,
+                updated_at
+            FROM
+                partitions_with_status
             WHERE
                 hub_id = %s
             AND dataset_id = %s
             AND version = %s
-            ORDER BY end_time, start_time DESC;
+            ORDER BY end_time, start_time DESC
         ''', (self.hub_id, self.dataset_id, self.version))
         partitions = [{
             'partition_values': row[0],
@@ -575,6 +644,8 @@ class DetailVersion(View):
             'start_time': row[3],
             'end_time': row[4],
             'created_at': row[5],
+            'status': row[6],
+            'updated_at': row[7],
         } for row in cursor.fetchall()]
 
         cursor.execute('''
@@ -770,6 +841,24 @@ class DetailVersion(View):
             'partitions': partitions,
             'dependencies': dependencies,
         }
+
+
+@dc.dataclass
+class VersionBackendId(View):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT backend_id
+            FROM dataset_versions
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+        ''', (self.hub_id, self.dataset_id, self.version))
+        return cursor.fetchone()[0]
 
 
 @dc.dataclass

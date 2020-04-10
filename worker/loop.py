@@ -35,8 +35,11 @@ def main():
         job = Job(**job_entry.data)
         backend = backends[job.backend_id]
 
+        cursor = conn.cursor()
         fn = backend.__getattribute__(job.action)
-        fn(**job.config)
+
+        fn(cursor, **job.config)
+        conn.commit()
 
 
 if __name__ == '__main__':
