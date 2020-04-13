@@ -7,5 +7,6 @@ web/static/dagre
 web/static/datatables
 web/static/uikit
 
+dev.py
 nginx.conf
 logs/*

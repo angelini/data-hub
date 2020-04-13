@@ -2,7 +2,7 @@ import flask
 
 from core.data import Backends, Types
 from core.engine import DatasetExists, DetailDataset, DetailVersion, ListVersions, NewDatasetVersion, \
-    PublishedVersions, PublishVersion, SetQueuedPartitionStatus, VersionBackendId, VersionExists
+    PublishedVersions, PublishVersion, SetQueuedPartitionStatus, SimpleDetailVersion, VersionExists
 from web.auth import auth_current_hub_reader, is_current_hub_writer, require_writer
 from web.db import DbException, check_assertion, fetch_view, enqueue_job, execute_action
 
@@ -155,7 +155,7 @@ def publish_html(hub_id, dataset_id, version):
 def verify_json(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(SetQueuedPartitionStatus(hub_id, dataset_id, version))
-    backend_id = fetch_view(VersionBackendId(hub_id, dataset_id, version))
+    backend_id = fetch_view(SimpleDetailVersion(hub_id, dataset_id, version))['backend_id']
     queue_id = enqueue_job(backend_id, 'verify_partitions', {
         'hub_id': str(hub_id),
         'dataset_id': str(dataset_id),
@@ -168,7 +168,7 @@ def verify_json(hub_id, dataset_id, version):
 def verify_html(hub_id, dataset_id, version):
     check_assertion(VersionExists(hub_id, dataset_id, version))
     execute_action(SetQueuedPartitionStatus(hub_id, dataset_id, version))
-    backend_id = fetch_view(VersionBackendId(hub_id, dataset_id, version))
+    backend_id = fetch_view(SimpleDetailVersion(hub_id, dataset_id, version))['backend_id']
     enqueue_job(backend_id, 'verify_partitions', {
         'hub_id': str(hub_id),
         'dataset_id': str(dataset_id),
