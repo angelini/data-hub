@@ -14,3 +14,7 @@ def verify_partitions(cursor, hub_id, dataset_id, version):
         path = pathlib.Path(partition['path'])
         status = Status.OK if verify_partition(path) else Status.ERROR
         UpdatePartitionStatus(partition['id'], status).execute(cursor)
+
+
+def discover_partitions(cursor, hub_id, dataset_id, version):
+    pass

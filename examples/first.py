@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+import pathlib
 import random
 
 import requests
@@ -18,6 +19,8 @@ class DateTimeEncoder(json.JSONEncoder):
 
 HOST = 'localhost'
 PORT = 5000
+EMAIL = 'default@local'
+PASSWORD = 'pass'
 
 
 def get_access_token_builder():
@@ -27,7 +30,7 @@ def get_access_token_builder():
         if 'access_token' not in memoized:
             response = requests.post(f'http://{HOST}:{PORT}/auth/login.json',
                                      headers={'Content-type': 'application/json'},
-                                     json={'email': 'default@local', 'password': 'pass'})
+                                     json={'email': EMAIL, 'password': PASSWORD})
             response.raise_for_status()
             memoized['access_token'] = response.json()['access_token']
         return memoized['access_token']
@@ -128,7 +131,7 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
     versions = [
         new_version(
             hub_id, dataset_id,
-            FileBackend.module, f'/tables/{dataset_name}/{i}', ['day', 'country'],
+            FileBackend.module, f'/tmp/tables/{dataset_name}/{i}', ['day', 'country'],
             '', False,
             columns,
             depends_on,
@@ -142,14 +145,18 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
         start = today - dt.timedelta(days=(duration + random.randint(0, 10)))
 
         for day_increment in range(duration):
-            start = start + dt.timedelta(days=day_increment)
-            end = start + dt.timedelta(days=1)
+            part_start = start + dt.timedelta(days=day_increment)
+            part_end = part_start + dt.timedelta(days=1)
+
             for country in ['CA', 'US']:
+                part_time = part_start.strftime("%Y-%m-%d")
+                part_path = f'/tmp/tables/{dataset_name}/{version}/time={part_time}/country={country}'
                 new_partition(
-                    hub_id, dataset_id, version,
-                    f'/tables/{dataset_name}/{version}', [start.strftime('%Y-%m-%d'), country],
-                    random.randint(10, 2000), start, end
+                    hub_id, dataset_id, version, part_path,
+                    [part_time, country],
+                    random.randint(10, 2000), part_start, part_end
                 )
+                pathlib.Path(part_path).mkdir(parents=True, exist_ok=True)
 
     published_version = versions[random.randint(-1 * version_count, -1)]
     publish_version(hub_id, dataset_id, published_version)
@@ -157,14 +164,14 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
     return (hub_id, dataset_id, published_version)
 
 
-def main(prefix=''):
-    user_id = new_user(f'{prefix}default@local', 'pass')
-    new_user(f'{prefix}other@local', 'pass')
+def main():
+    user_id = new_user(EMAIL, PASSWORD)
+    new_user('other@local', PASSWORD)
 
-    team_id = new_team(f'{prefix}Everyone')
+    team_id = new_team('Everyone')
     new_team_member(team_id, user_id)
 
-    marketing_hub_id = new_hub(f'{prefix}Marketing', team_id)
+    marketing_hub_id = new_hub('Marketing', team_id)
 
     visits = build_full_dataset(
         marketing_hub_id,
@@ -208,7 +215,7 @@ def main(prefix=''):
         depends_on=[leads, campaigns]
     )
 
-    sales_hub_id = new_hub(f'{prefix}Sales', team_id)
+    sales_hub_id = new_hub('Sales', team_id)
 
     customers = build_full_dataset(
         sales_hub_id,
@@ -232,16 +239,18 @@ def main(prefix=''):
         depends_on=[customers]
     )
 
-    finance_hub_id = new_hub(f'{prefix}Finance', team_id)
+    finance_hub_id = new_hub('Finance', team_id)
 
     build_full_dataset(
         finance_hub_id,
         'expenses',
         [
             ('id', IntType.name, '', False, True, False),
+            ('customer_id', IntType.name, '', False, True, False),
             ('price', IntType.name, '', False, False, False),
             ('time', IntType.name, '', False, False, False),
-        ]
+        ],
+        depends_on=[customers]
     )
 
 

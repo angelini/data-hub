@@ -2,7 +2,7 @@ function label(node) {
     if (node.is_same_hub) {
         return `${node.dataset_name} ${node.version}`
     } else {
-        return `${node.hub_name} ${node.dataset_name} - ${node.version}`
+        return `${node.hub_name}.${node.dataset_name} ${node.version}`
     }
 }
 
