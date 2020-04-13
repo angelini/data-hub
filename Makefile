@@ -1,5 +1,6 @@
 .PHONY: check-venv check-web
-.PHONY: install reset example web web-prod psql
+.PHONY: install reset example web web-prod
+.PHONY: ipython psql
 .PHONY: worker insert-job
 .PHONY: nginx nginx-reload
 
@@ -99,6 +100,10 @@ insert-job: check-venv
 
 psql:
 	psql $(ARGS)
+
+ipython:
+	touch dev.py
+	ipython -i dev.py
 
 nginx.conf: check-venv config/templates/nginx.conf.j2
 	python config/generate.py

@@ -24,7 +24,7 @@ DROP TABLE IF EXISTS connections        CASCADE;
 DROP TABLE IF EXISTS queue CASCADE;
 
 DROP TYPE IF EXISTS access_level CASCADE;
-DROP TYPE IF EXISTS status CASCADE;
+DROP TYPE IF EXISTS status       CASCADE;
 
 CREATE TABLE IF NOT EXISTS users (
     id uuid,
@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS team_members (
 );
 
 CREATE INDEX team_members_team_user_idx ON team_members(team_id, user_id);
+CREATE UNIQUE INDEX current_team_members_idx ON team_members(team_id, user_id) WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS hubs (
     id uuid,
@@ -105,6 +106,8 @@ CREATE TABLE IF NOT EXISTS datasets (
     CONSTRAINT name_length CHECK (char_length(name) >= 2 AND char_length(name) < 1028),
     CONSTRAINT deleted_at_greater CHECK (deleted_at IS NULL OR deleted_at > created_at)
 );
+
+CREATE UNIQUE INDEX current_dataset_names_idx ON datasets(hub_id, name) WHERE deleted_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS backends (
     id int,
@@ -212,6 +215,8 @@ CREATE TABLE IF NOT EXISTS partitions (
 
 CREATE INDEX partitions_values_idx ON partitions USING gin(partition_values);
 CREATE INDEX version_partitions_idx ON partitions(hub_id, dataset_id, version);
+CREATE UNIQUE INDEX current_partition_paths_idx ON partitions(hub_id, dataset_id, version, path) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX current_partition_values_idx ON partitions(hub_id, dataset_id, version, partition_values) WHERE deleted_at IS NULL;
 
 CREATE TYPE status AS ENUM ('queued', 'ok', 'error', 'unknown');
 

@@ -614,21 +614,28 @@ class DetailVersion(View):
 
 
 @dc.dataclass
-class VersionBackendId(View):
+class SimpleDetailVersion(View):
     hub_id:     uuid.UUID
     dataset_id: uuid.UUID
     version:    int
 
     def _fetch(self, cursor):
         cursor.execute('''
-            SELECT backend_id
-            FROM dataset_versions
+            SELECT
+                backend_id, partition_keys, path
+            FROM
+                dataset_versions
             WHERE
                 hub_id = %s
             AND dataset_id = %s
             AND version = %s
         ''', (self.hub_id, self.dataset_id, self.version))
-        return cursor.fetchone()[0]
+        row = cursor.fetchone()
+        return {
+            'backend_id': row[0],
+            'partition_keys': row[1],
+            'path': row[2],
+        }
 
 
 @dc.dataclass

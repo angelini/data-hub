@@ -2,6 +2,7 @@ import datetime as dt
 import json
 import pathlib
 import random
+import shutil
 
 import requests
 
@@ -21,6 +22,7 @@ HOST = 'localhost'
 PORT = 5000
 EMAIL = 'default@local'
 PASSWORD = 'pass'
+TMP_DIR = pathlib.Path('/tmp/tables')
 
 
 def get_access_token_builder():
@@ -128,10 +130,11 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
     depends_on = depends_on or []
     dataset_id = new_dataset(hub_id, dataset_name)
 
+    dataset_path = TMP_DIR.joinpath(f'{dataset_name}')
     versions = [
         new_version(
             hub_id, dataset_id,
-            FileBackend.module, f'/tmp/tables/{dataset_name}/{i}', ['day', 'country'],
+            FileBackend.module, str(dataset_path.joinpath(str(i))), ['country', 'day'],
             '', False,
             columns,
             depends_on,
@@ -140,6 +143,7 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
     ]
 
     for version in versions:
+        version_path = dataset_path.joinpath(str(version))
         duration = random.randint(4, 20)
         today = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         start = today - dt.timedelta(days=(duration + random.randint(0, 10)))
@@ -147,13 +151,13 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
         for day_increment in range(duration):
             part_start = start + dt.timedelta(days=day_increment)
             part_end = part_start + dt.timedelta(days=1)
+            part_day = part_start.strftime("%Y-%m-%d")
 
             for country in ['CA', 'US']:
-                part_time = part_start.strftime("%Y-%m-%d")
-                part_path = f'/tmp/tables/{dataset_name}/{version}/time={part_time}/country={country}'
+                part_path = str(version_path.joinpath(f'country={country}/day={part_day}'))
                 new_partition(
                     hub_id, dataset_id, version, part_path,
-                    [part_time, country],
+                    [country, part_day],
                     random.randint(10, 2000), part_start, part_end
                 )
                 pathlib.Path(part_path).mkdir(parents=True, exist_ok=True)
@@ -165,6 +169,9 @@ def build_full_dataset(hub_id, dataset_name, columns, version_count=5, depends_o
 
 
 def main():
+    if TMP_DIR.exists():
+        shutil.rmtree(TMP_DIR)
+
     user_id = new_user(EMAIL, PASSWORD)
     new_user('other@local', PASSWORD)
 
