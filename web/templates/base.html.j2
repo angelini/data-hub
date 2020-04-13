@@ -51,6 +51,13 @@
           $('.data-table').DataTable({
               'lengthChange': false,
           });
+
+        document.querySelectorAll('.submit-parent-form').forEach(button => {
+          button.addEventListener('click', e => {
+            e.preventDefault();
+            e.target.closest('form').submit();
+          });
+        });
       });
     </script>
   </body>

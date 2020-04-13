@@ -20,6 +20,13 @@ def format_datetime(value):
     return ''
 
 
+def format_tooltip(partition):
+    tooltip = f'pos:left; title:{partition["status"].capitalize()}'
+    if partition['updated_at']:
+        tooltip += f' - {format_datetime(partition["updated_at"])}'
+    return tooltip
+
+
 def create_app():
     logging.basicConfig(format='%(message)s', stream=sys.stdout, level=logging.INFO)
     log = logging.getLogger('werkzeug')
@@ -79,6 +86,7 @@ def create_app():
     app.register_blueprint(connections.bp)
 
     app.jinja_env.filters['datetime'] = format_datetime
+    app.jinja_env.filters['tooltip'] = format_tooltip
 
     @app.before_request
     def before_request_logger():

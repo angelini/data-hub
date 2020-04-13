@@ -1,263 +1,18 @@
 import abc
 import collections as cl
 import dataclasses as dc
-import datetime as dt
-import pathlib as pl
 import uuid
-import typing as t
 
 import jinja2 as jinja
-import passlib.context
-import psycopg2 as psql
-import pytz
-import structlog
 
-from core.data import AccessLevel, Backend, Column, Connection, Dataset, DatasetVersion, Dependency, Hub, \
-    Partition, PartitionStatus, PublishedVersion, Status, Team, TeamMember, TeamRole, Type, User, \
-    write, upsert
-
-pwd_context = passlib.context.CryptContext(schemes=['argon2'])
-
-
-def simplify_arg(arg):
-    if isinstance(arg, uuid.UUID):
-        return str(arg)
-    return arg
-
-
-def simplify_args(args):
-    return {
-        key: simplify_arg(value)
-        for key, value in args.items()
-    }
-
-
-class Action(abc.ABC):
-
-    def execute(self, cursor):
-        log = structlog.get_logger()
-        log.info(f'execute_{self.__class__.__name__}', **simplify_args(self.__dict__))
-        return self._execute(cursor)
-
-    @abc.abstractmethod
-    def _execute(self, cursor):
-        pass
-
-
-@dc.dataclass
-class NewUser(Action):
-    email:    str
-    password: str
-
-    def _execute(self, cursor):
-        user_id = uuid.uuid4()
-        password_hash = pwd_context.hash(self.password)
-        write(cursor, User(user_id, self.email, password_hash, dt.datetime.now(tz=pytz.utc)))
-        return user_id
-
-
-@dc.dataclass
-class NewTeam(Action):
-    name: str
-
-    def _execute(self, cursor):
-        team_id = uuid.uuid4()
-        write(cursor, Team(team_id, self.name, dt.datetime.now(tz=pytz.utc)))
-        return team_id
-
-
-@dc.dataclass
-class NewTeamMember(Action):
-    team_id: uuid.UUID
-    user_id: uuid.UUID
-
-    def _execute(self, cursor):
-        member_id = uuid.uuid4()
-        write(cursor, TeamMember(member_id, self.team_id, self.user_id, dt.datetime.now(tz=pytz.utc), None))
-        return member_id
-
-
-@dc.dataclass
-class NewHub(Action):
-    team_id: uuid.UUID
-    name:    str
-
-    def _execute(self, cursor):
-        created_at = dt.datetime.now(tz=pytz.utc)
-
-        hub_id = uuid.uuid4()
-        write(cursor, Hub(hub_id, self.team_id, self.name, created_at))
-
-        team_role_id = uuid.uuid4()
-        write(cursor, TeamRole(team_role_id, self.team_id, hub_id, AccessLevel.ADMIN.value, created_at))
-
-        return hub_id
-
-
-@dc.dataclass
-class NewDataset(Action):
-    hub_id: uuid.UUID
-    name:   str
-
-    def _execute(self, cursor):
-        dataset_id = uuid.uuid4()
-        write(cursor, Dataset(self.hub_id, dataset_id, self.name, dt.datetime.now(tz=pytz.utc), None))
-        return dataset_id
-
-
-@dc.dataclass
-class NewDatasetVersion(Action):
-    hub_id:         uuid.UUID
-    dataset_id:     uuid.UUID
-    backend:        str
-    path:           pl.Path
-    partition_keys: t.List[str]
-    description:    str
-    is_overlapping: bool
-    columns:        t.List[t.Tuple[str, str, str, bool, bool, bool]]
-    depends_on:     t.List[t.Tuple[str, str, int]]
-
-    def _execute(self, cursor):
-        cursor.execute('''
-            SELECT max(version)
-            FROM dataset_versions
-            WHERE
-                hub_id = %s
-            AND dataset_id = %s
-        ''', (self.hub_id, self.dataset_id))
-        latest_version = cursor.fetchone()[0] or 0
-
-        write(cursor, DatasetVersion(self.hub_id,
-                                     self.dataset_id,
-                                     latest_version + 1,
-                                     Backend.by_module(self.backend).id,
-                                     self.path,
-                                     self.partition_keys,
-                                     self.description,
-                                     self.is_overlapping,
-                                     dt.datetime.now(tz=pytz.utc)))
-
-        position = 0
-        for column in self.columns:
-            name, type_name, description, is_nullable, is_unique, has_pii = column
-            write(cursor, Column(self.hub_id,
-                                 self.dataset_id,
-                                 latest_version + 1,
-                                 name,
-                                 Type.by_name(type_name).id,
-                                 position,
-                                 description,
-                                 is_nullable,
-                                 is_unique,
-                                 has_pii))
-            position += 1
-
-        for (parent_hub_id, parent_dataset_id, parent_version) in self.depends_on:
-            write(cursor, Dependency(parent_hub_id,
-                                     parent_dataset_id,
-                                     parent_version,
-                                     self.hub_id,
-                                     self.dataset_id,
-                                     latest_version + 1))
-
-        return latest_version + 1
-
-
-@dc.dataclass
-class NewPartition(Action):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
-    path:       str
-    values:     t.List[str]
-    row_count:  t.Optional[int]
-    start_time: t.Optional[dt.datetime]
-    end_time:   t.Optional[dt.datetime]
-
-    def _execute(self, cursor):
-        partition_id = uuid.uuid4()
-        write(cursor, Partition(partition_id,
-                                self.hub_id,
-                                self.dataset_id,
-                                self.version,
-                                self.path,
-                                self.values,
-                                self.row_count,
-                                self.start_time,
-                                self.end_time,
-                                dt.datetime.now(tz=pytz.utc),
-                                None))
-        return partition_id
-
-
-@dc.dataclass
-class NewConnection(Action):
-    hub_id:       uuid.UUID
-    dataset_id:   uuid.UUID
-    connector_id: uuid.UUID
-    path:         str
-
-    def _execute(self, cursor):
-        connection_id = uuid.uuid4()
-        write(cursor, Connection(connection_id,
-                                 self.hub_id,
-                                 self.dataset_id,
-                                 self.connector_id,
-                                 self.path,
-                                 dt.datetime.now(tz=pytz.utc)))
-        return connection_id
-
-
-@dc.dataclass
-class PublishVersion(Action):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
-
-    def _execute(self, cursor):
-        write(cursor, PublishedVersion(self.hub_id,
-                                       self.dataset_id,
-                                       self.version,
-                                       dt.datetime.now(tz=pytz.utc)))
-
-
-@dc.dataclass
-class SetQueuedPartitionStatus(Action):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
-
-    def _execute(self, cursor):
-        cursor.execute('''
-            SELECT id
-            FROM partitions
-            WHERE
-                hub_id = %s
-            AND dataset_id = %s
-            AND version = %s
-        ''', (self.hub_id, self.dataset_id, self.version))
-        for row in cursor.fetchall():
-            upsert(cursor, PartitionStatus(row[0],
-                                           Status.QUEUED.value,
-                                           dt.datetime.now(tz=pytz.utc)))
-
-
-@dc.dataclass
-class UpdatePartitionStatus(Action):
-    partition_id: uuid.UUID
-    status:       Status
-
-    def _execute(self, cursor):
-        upsert(cursor, PartitionStatus(self.partition_id,
-                                       self.status.value,
-                                       dt.datetime.now(tz=pytz.utc)))
+from core.data import AccessLevel
+from core.engine import logging
 
 
 class View(abc.ABC):
 
     def fetch(self, cursor):
-        log = structlog.get_logger()
-        log.info(f'fetch_{self.__class__.__name__}', **simplify_args(self.__dict__))
+        logging.info(f'fetch_{self.__class__.__name__}', self.__dict__)
         return self._fetch(cursor)
 
     @abc.abstractmethod
@@ -354,6 +109,21 @@ class ListDatasets(View):
                 for row in cursor.fetchall()
             ]
         }
+
+
+@dc.dataclass
+class ListBackends(View):
+
+    def _fetch(self, cursor):
+        cursor.execute('''
+            SELECT id, module
+            FROM backends
+        ''')
+        return [{
+            'id': row[0],
+            'module': row[1],
+
+        } for row in cursor.fetchall()]
 
 
 @dc.dataclass
@@ -891,149 +661,3 @@ class PublishedVersions(View):
             published[f'{row[0]}:{row[1]}'][f'{row[2]}:{row[3]}'].append(row[4])
 
         return published
-
-
-class Assertion(abc.ABC):
-    status_code: int
-
-    def check(self, cursor):
-        log = structlog.get_logger()
-        log.info(f'check_{self.__class__.__name__}', **simplify_args(self.__dict__))
-        return self._check(cursor)
-
-    @abc.abstractmethod
-    def _check(self, cursor):
-        pass
-
-    @abc.abstractmethod
-    def message(self):
-        pass
-
-
-@dc.dataclass
-class NoOverlappingPartitions(Assertion):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
-
-    status_code = 400
-
-    def _check(self, cursor):
-        cursor.execute('''
-            SELECT
-                is_overlapping
-            FROM
-                dataset_versions
-            WHERE
-                hub_id = %s
-            AND dataset_id = %s
-            AND version = %s
-        ''', (self.hub_id, self.dataset_id, self.version))
-        if cursor.fetchone()[0]:
-            return True
-
-        cursor.execute('''
-            SELECT
-                id
-            FROM
-                partitions_with_last_end_time
-            WHERE
-                hub_id = %s
-            AND dataset_id = %s
-            AND version = %s
-        ''', (self.hub_id, self.dataset_id, self.version))
-        return cursor.rowcount == 0
-
-    def message(self):
-        return f'Version {self.hub_id}::{self.dataset_id}::{self.version} contains overlapping partitions'
-
-
-@dc.dataclass
-class TeamExists(Assertion):
-    team_id: int
-
-    status_code = 404
-
-    def _check(self, cursor):
-        cursor.execute('''
-            SELECT 1
-            FROM teams
-            WHERE id = %s
-        ''', (self.team_id, ))
-        return cursor.rowcount == 1
-
-    def message(self):
-        return f'Team {self.team_id} does not exist'
-
-
-@dc.dataclass
-class DatasetExists(Assertion):
-    dataset_id: uuid.UUID
-
-    status_code = 404
-
-    def _check(self, cursor):
-        cursor.execute('''
-            SELECT 1
-            FROM datasets
-            WHERE id = %s
-        ''', (self.dataset_id, ))
-        return cursor.rowcount == 1
-
-    def message(self):
-        return f'Dataset {self.dataset_id} does not exist'
-
-
-@dc.dataclass
-class VersionExists(Assertion):
-    hub_id:     uuid.UUID
-    dataset_id: uuid.UUID
-    version:    int
-
-    status_code = 404
-
-    def _check(self, cursor):
-        cursor.execute('''
-            SELECT
-                1
-            FROM
-                dataset_versions
-            WHERE
-                hub_id = %s
-            AND dataset_id = %s
-            AND version = %s
-        ''', (self.hub_id, self.dataset_id, self.version))
-        return cursor.rowcount == 1
-
-    def message(self):
-        return f'Version {self.hub_id}::{self.dataset_id}::{self.version} does not exist'
-
-
-@dc.dataclass
-class CorrectPassword(Assertion):
-    email:    str
-    password: str
-
-    status_code = 403
-
-    def _check(self, cursor):
-        cursor.execute('''
-            SELECT password_hash
-            FROM users
-            WHERE email = %s
-        ''', (self.email, ))
-
-        if cursor.rowcount == 0:
-            return False
-
-        hash = cursor.fetchone()[0]
-        return pwd_context.verify(self.password, hash)
-
-    def message(self):
-        return f'Incorrect password for {self.email}'
-
-
-def execute(action):
-    conn = psql.connect('')
-    action.execute(conn.cursor())
-    conn.commit()

@@ -5,19 +5,16 @@ import pq
 import psycopg2 as psql
 import psycopg2.extras
 
+from core.engine import ListBackends
 from core.job import Job
 
 psql.extras.register_uuid()
 
 
 def load_backends(cursor):
-    cursor.execute('''
-        SELECT id, module
-        FROM backends
-    ''')
     return {
-        row[0]: importlib.import_module(row[1])
-        for row in cursor.fetchall()
+        backend['id']: importlib.import_module(backend['module'])
+        for backend in ListBackends().fetch(cursor)
     }
 
 

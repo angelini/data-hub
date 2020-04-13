@@ -6,6 +6,12 @@
   <li class="uk-active"><a href="{{ url_for('versions.index_html', hub_id=hub_id, dataset_id=dataset_id) }}" class="pure-menu-link">Versions</a></li>
 {% endblock %}
 
+{% block buttons %}
+  <form action="{{ url_for('versions.verify_html', hub_id=hub_id, dataset_id=dataset_id, version=version.version) }}" method="post">
+    <a class="submit-parent-form uk-button uk-button-primary">Verify Partitions</a>
+  </form>
+{% endblock %}
+
 {% block content %}
   <h1 class="uk-heading-small uk-text-capitalize">{{ name }}</h1>
 
@@ -159,13 +165,13 @@
               <td>{{ partition.created_at | datetime }}</td>
               <td>
                 {% if partition.status == 'ok' %}
-                  <span uk-icon="check"></span></a>
+                  <span uk-icon="check" uk-tooltip="{{ partition | tooltip }}"></span></a>
                 {% elif partition.status == 'error' %}
-                  <span uk-icon="warning"></span></a>
+                  <span uk-icon="warning" uk-tooltip="{{ partition | tooltip }}"></span></a>
                 {% elif partition.status == 'queued' %}
-                  <span uk-icon="refresh"></span></a>
+                  <span uk-icon="refresh" uk-tooltip="{{ partition | tooltip }}"></span></a>
                 {% else %}
-                  <span uk-icon="question"></span></a>
+                  <span uk-icon="question" uk-tooltip="{{ partition | tooltip }}"></span></a>
                 {% endif %}
               </td>
             </tr>
