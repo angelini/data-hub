@@ -1,3 +1,5 @@
+import functools
+
 import flask
 import pq
 import psycopg2 as psql
@@ -10,6 +12,17 @@ psql.extras.register_uuid()
 
 class DbException(Exception):
     pass
+
+
+def raise_as_dbexception(fn):
+    @functools.wraps(fn)
+    def handler(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except psql.DatabaseError as e:
+            raise DbException(e.diag.message_primary)
+
+    return handler
 
 
 class AssertionFailure(Exception):
@@ -26,28 +39,29 @@ def connect():
     return flask.g.db
 
 
+@raise_as_dbexception
 def enqueue_job(backend_id, action, config):
     connect()
     return flask.g.queue.put(Job(backend_id, action, config).__dict__)
 
 
+@raise_as_dbexception
 def fetch_view(view):
     conn = connect()
     cursor = conn.cursor()
     return view.fetch(cursor)
 
 
+@raise_as_dbexception
 def execute_action(action):
     conn = connect()
-    try:
-        cursor = conn.cursor()
-        result = action.execute(cursor)
-        conn.commit()
-        return result
-    except psql.DatabaseError as e:
-        raise DbException(e.diag.message_primary)
+    cursor = conn.cursor()
+    result = action.execute(cursor)
+    conn.commit()
+    return result
 
 
+@raise_as_dbexception
 def check_assertion(assertion):
     conn = connect()
     cursor = conn.cursor()

@@ -385,6 +385,7 @@ CREATE OR REPLACE VIEW versions_with_backend AS
         bac.module,
         ver.path,
         ver.description,
+        ver.is_overlapping,
         ver.created_at
     FROM
         dataset_versions ver

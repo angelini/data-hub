@@ -7,13 +7,17 @@
 {% endblock %}
 
 {% block buttons %}
+  <a class="uk-button uk-button-primary" href="{{ url_for('versions.clone_html', hub_id=hub_id, dataset_id=dataset_id, version=version.version) }}">Clone</a>
+  <form action="{{ url_for('versions.discover_html', hub_id=hub_id, dataset_id=dataset_id, version=version.version) }}" method="post">
+    <a class="submit-parent-form uk-button uk-button-primary uk-margin-left">Discover</a>
+  </form>
   <form action="{{ url_for('versions.verify_html', hub_id=hub_id, dataset_id=dataset_id, version=version.version) }}" method="post">
-    <a class="submit-parent-form uk-button uk-button-primary">Verify Partitions</a>
+    <a class="submit-parent-form uk-button uk-button-primary uk-margin-left">Verify</a>
   </form>
 {% endblock %}
 
 {% block content %}
-  <h1 class="uk-heading-small uk-text-capitalize">{{ name }}</h1>
+  <h1 class="uk-heading-small uk-text-capitalize">{{ dataset_name }}</h1>
 
   <div class="uk-container-small">
     <table class="uk-table uk-table-hover">
@@ -141,6 +145,7 @@
                 </div>
               </div>
             </td>
+            <td></td>
             <td>
               <div class="uk-flex uk-flex-around">
                 <div>
@@ -151,7 +156,6 @@
                 </div>
               </div>
             </td>
-            <td></td>
           </tr>
           {% for partition in partitions %}
             <tr>

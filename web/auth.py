@@ -1,10 +1,11 @@
-from functools import wraps
+import functools
 
 import flask
 import flask_jwt_extended as flask_jwt
 
 from core.data import AccessLevel
-from core.engine import CorrectPassword, DetailUser
+from core.engine.assertions import CorrectPassword
+from core.engine.views import DetailUser
 from web.db import AssertionFailure, check_assertion, fetch_view
 
 bp = flask.Blueprint('auth', __name__, url_prefix='/auth')
@@ -84,7 +85,7 @@ def auth_current_hub_writer():
 
 
 def require_writer(fn):
-    @wraps(fn)
+    @functools.wraps(fn)
     def check_access(*args, **kwargs):
         error = auth_current_hub_writer()
         if error:

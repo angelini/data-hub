@@ -16,7 +16,7 @@ from core.engine import logging, security
 class Action(abc.ABC):
 
     def execute(self, cursor):
-        logging.info(f'execute_{self.__class__.__name__}', self.__dict__)
+        logging.info(f'execute_{self.__class__.__name__}', **self.__dict__)
         return self._execute(cursor)
 
     @abc.abstractmethod

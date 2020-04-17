@@ -7,6 +7,8 @@
 {% endblock %}
 
 {% block content %}
+  <h1 class="uk-heading-small uk-text-capitalize uk-margin-medium-bottom">{{ name }}</h1>
+
   <form id="new-version" class="uk-form-horizontal" action="{{ url_for('versions.new_html', hub_id=hub_id, dataset_id=dataset_id) }}" method="post">
     <fieldset class="uk-fieldset uk-container-small">
       {% if error %}
@@ -20,7 +22,7 @@
         <div class="uk-form-controls">
           <select id="backend" class="uk-select" name="backend">
             {% for backend in backends %}
-              <option value="{{ backend.module }}">{{ backend.module }}</option>
+              <option value="{{ backend.module }}" {% if version.module == backend.module %}selected="selected"{% endif %}>{{ backend.module }}</option>
             {% endfor %}
           </select>
         </div>
@@ -29,21 +31,21 @@
       <div class="uk-margin">
         <label class="uk-form-label" for="path">Path</label>
         <div class="uk-form-controls">
-          <input id="path" class="uk-input" name="path" type="text" placeholder="/example" required>
+          <input id="path" class="uk-input" name="path" type="text" placeholder="/example" value="{{ version.path }}" required>
         </div>
       </div>
 
       <div class="uk-margin">
         <label class="uk-form-label" for="description">Description</label>
         <div class="uk-form-controls">
-          <input id="description" class="uk-input" name="description" type="text" placeholder="">
+          <input id="description" class="uk-input" name="description" type="text" placeholder="" value="{{ version.description }}">
         </div>
       </div>
 
       <div class="uk-margin">
         <label class="uk-form-label" for="is_overlapping">Has Overlapping Partitions</label>
         <div class="uk-form-controls">
-          <input id="is_overlapping" class="uk-checkbox" name="is_overlapping" type="checkbox">
+          <input id="is_overlapping" class="uk-checkbox" name="is_overlapping" type="checkbox" {% if version.is_overlapping %}checked="checked"{% endif %}>
         </div>
       </div>
     </fieldset>

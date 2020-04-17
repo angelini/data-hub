@@ -1,6 +1,8 @@
 import flask
 
-from core.engine import DetailTeam, ListHubs, ListTeams, ListUsers, NewTeam, NewTeamMember, TeamExists
+from core.engine.actions import NewTeam, NewTeamMember
+from core.engine.assertions import TeamExists
+from core.engine.views import DetailTeam, ListTeams
 from web.db import check_assertion, DbException, fetch_view, execute_action
 
 bp = flask.Blueprint('teams', __name__, url_prefix='/teams')

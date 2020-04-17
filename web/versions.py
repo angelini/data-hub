@@ -1,8 +1,9 @@
 import flask
 
 from core.data import Backends, Types
-from core.engine import DatasetExists, DetailDataset, DetailVersion, ListVersions, NewDatasetVersion, \
-    PublishedVersions, PublishVersion, SetQueuedPartitionStatus, SimpleDetailVersion, VersionExists
+from core.engine.actions import NewDatasetVersion, PublishVersion, SetQueuedPartitionStatus
+from core.engine.assertions import DatasetExists, VersionExists
+from core.engine.views import DetailDataset, DetailVersion, ListVersions, PublishedVersions, SimpleDetailVersion
 from web.auth import auth_current_hub_reader, is_current_hub_writer, require_writer
 from web.db import DbException, check_assertion, fetch_view, enqueue_job, execute_action
 
@@ -16,12 +17,13 @@ def authorize_before_request():
 
 @bp.route('/index.json', methods=['GET'])
 def index_json(hub_id, dataset_id):
+    check_assertion(DatasetExists(hub_id, dataset_id))
     return flask.jsonify(fetch_view(ListVersions(hub_id, dataset_id)))
 
 
 @bp.route('/index.html', methods=['GET'])
 def index_html(hub_id, dataset_id):
-    check_assertion(DatasetExists(dataset_id))
+    check_assertion(DatasetExists(hub_id, dataset_id))
     details = fetch_view(DetailDataset(hub_id, dataset_id))
     versions = fetch_view(ListVersions(hub_id, dataset_id))
     return flask.render_template('versions/index.html.j2',
@@ -94,13 +96,16 @@ def new_html(hub_id, dataset_id):
             error = str(e)
 
     published = fetch_view(PublishedVersions())
+    dataset_name = fetch_view(DetailDataset(hub_id, dataset_id))['name']
     return flask.render_template('versions/new.html.j2',
                                  hub_id=hub_id,
                                  dataset_id=dataset_id,
                                  backends=Backends,
                                  types=Types,
                                  error=error,
-                                 published=published)
+                                 published=published,
+                                 dataset_name=dataset_name,
+                                 version={})
 
 
 @bp.route('/<int:version>/detail.json', methods=['GET'])
@@ -132,6 +137,22 @@ def dependencies_html(hub_id, dataset_id, version):
                                  dataset_id=dataset_id,
                                  version_int=version,
                                  is_writer=is_current_hub_writer(),
+                                 **details)
+
+
+@bp.route('/<int:version>/clone.html', methods=['GET'])
+def clone_html(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
+    details = fetch_view(DetailVersion(hub_id, dataset_id, version))
+    published = fetch_view(PublishedVersions())
+    dataset_name = fetch_view(DetailDataset(hub_id, dataset_id))['name']
+    return flask.render_template('versions/new.html.j2',
+                                 hub_id=hub_id,
+                                 dataset_id=dataset_id,
+                                 backends=Backends,
+                                 types=Types,
+                                 published=published,
+                                 dataset_name=dataset_name,
                                  **details)
 
 
@@ -170,6 +191,30 @@ def verify_html(hub_id, dataset_id, version):
     execute_action(SetQueuedPartitionStatus(hub_id, dataset_id, version))
     backend_id = fetch_view(SimpleDetailVersion(hub_id, dataset_id, version))['backend_id']
     enqueue_job(backend_id, 'verify_partitions', {
+        'hub_id': str(hub_id),
+        'dataset_id': str(dataset_id),
+        'version': str(version)
+    })
+    return flask.redirect(flask.url_for('versions.detail_html', hub_id=hub_id, dataset_id=dataset_id, version=version))
+
+
+@bp.route('/<int:version>/discover.json', methods=['POST'])
+def discover_json(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
+    backend_id = fetch_view(SimpleDetailVersion(hub_id, dataset_id, version))['backend_id']
+    queue_id = enqueue_job(backend_id, 'discover_partitions', {
+        'hub_id': str(hub_id),
+        'dataset_id': str(dataset_id),
+        'version': str(version)
+    })
+    return flask.jsonify({'queue_id': queue_id})
+
+
+@bp.route('/<int:version>/discover.html', methods=['POST'])
+def discover_html(hub_id, dataset_id, version):
+    check_assertion(VersionExists(hub_id, dataset_id, version))
+    backend_id = fetch_view(SimpleDetailVersion(hub_id, dataset_id, version))['backend_id']
+    enqueue_job(backend_id, 'discover_partitions', {
         'hub_id': str(hub_id),
         'dataset_id': str(dataset_id),
         'version': str(version)

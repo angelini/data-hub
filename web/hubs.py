@@ -2,7 +2,8 @@ import flask
 import flask_jwt_extended as flask_jwt
 
 from core.data import AccessLevel
-from core.engine import ListHubs, ListTeams, NewHub
+from core.engine.actions import NewHub
+from core.engine.views import ListHubs, ListTeams
 from web.db import DbException, fetch_view, execute_action
 
 bp = flask.Blueprint('hubs', __name__, url_prefix='/hubs')

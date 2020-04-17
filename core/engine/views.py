@@ -12,7 +12,7 @@ from core.engine import logging
 class View(abc.ABC):
 
     def fetch(self, cursor):
-        logging.info(f'fetch_{self.__class__.__name__}', self.__dict__)
+        logging.info(f'fetch_{self.__class__.__name__}', **self.__dict__)
         return self._fetch(cursor)
 
     @abc.abstractmethod
@@ -119,11 +119,16 @@ class ListBackends(View):
             SELECT id, module
             FROM backends
         ''')
-        return [{
-            'id': row[0],
-            'module': row[1],
+        return {
+            'backends': [
+                {
+                    'id': row[0],
+                    'module': row[1],
 
-        } for row in cursor.fetchall()]
+                }
+                for row in cursor.fetchall()
+            ]
+        }
 
 
 @dc.dataclass
@@ -587,7 +592,7 @@ class DetailVersion(View):
         } for row in cursor.fetchall()])
 
         cursor.execute('''
-            SELECT partition_keys, module, path, description, created_at
+            SELECT partition_keys, module, path, description, is_overlapping, created_at
             FROM versions_with_backend
             WHERE
                 hub_id = %s
@@ -605,7 +610,8 @@ class DetailVersion(View):
                 'module': row[1],
                 'path': row[2],
                 'description': row[3],
-                'created_at': row[4],
+                'is_overlapping': row[4],
+                'created_at': row[5],
             },
             'columns': columns,
             'partitions': partitions,

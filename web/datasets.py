@@ -1,8 +1,10 @@
 import flask
 
-from core.engine import DetailHub, ListDatasets, NewDataset
+from core.engine.actions import NewDataset
+from core.engine.assertions import HubExists
+from core.engine.views import DetailHub, ListDatasets
 from web.auth import auth_current_hub_reader, is_current_hub_writer, require_writer
-from web.db import DbException, fetch_view, execute_action
+from web.db import DbException, check_assertion, fetch_view, execute_action
 
 bp = flask.Blueprint('datasets', __name__, url_prefix='/hubs/<uuid:hub_id>/datasets')
 
@@ -14,11 +16,13 @@ def authorize_before_request():
 
 @bp.route('/index.json', methods=['GET'])
 def index_json(hub_id):
+    check_assertion(HubExists(hub_id))
     return flask.jsonify(fetch_view(ListDatasets(hub_id)))
 
 
 @bp.route('/index.html', methods=['GET'])
 def index_html(hub_id):
+    check_assertion(HubExists(hub_id))
     details = fetch_view(DetailHub(hub_id))
     return flask.render_template('datasets/index.html.j2',
                                  hub_id=hub_id,
@@ -48,4 +52,5 @@ def new_html(hub_id):
         except DbException as e:
             error = str(e)
 
-    return flask.render_template('datasets/new.html.j2', hub_id=hub_id, error=error)
+    details = fetch_view(DetailHub(hub_id))
+    return flask.render_template('datasets/new.html.j2', hub_id=hub_id, error=error, **details)

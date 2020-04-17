@@ -1,5 +1,6 @@
 import abc
 import dataclasses as dc
+import typing as t
 import uuid
 
 from core.engine import logging, security
@@ -9,7 +10,7 @@ class Assertion(abc.ABC):
     status_code: int
 
     def check(self, cursor):
-        logging.info(f'check_{self.__class__.__name__}', self.__dict__)
+        logging.info(f'check_{self.__class__.__name__}', **self.__dict__)
         return self._check(cursor)
 
     @abc.abstractmethod
@@ -78,7 +79,26 @@ class TeamExists(Assertion):
 
 
 @dc.dataclass
+class HubExists(Assertion):
+    hub_id: int
+
+    status_code = 404
+
+    def _check(self, cursor):
+        cursor.execute('''
+            SELECT 1
+            FROM hubs
+            WHERE id = %s
+        ''', (self.hub_id, ))
+        return cursor.rowcount == 1
+
+    def message(self):
+        return f'Hub {self.hub_id} does not exist'
+
+
+@dc.dataclass
 class DatasetExists(Assertion):
+    hub_id:     uuid.UUID
     dataset_id: uuid.UUID
 
     status_code = 404
@@ -87,12 +107,44 @@ class DatasetExists(Assertion):
         cursor.execute('''
             SELECT 1
             FROM datasets
-            WHERE id = %s
-        ''', (self.dataset_id, ))
+            WHERE
+                hub_id = %s
+            AND id = %s
+        ''', (self.hub_id, self.dataset_id))
         return cursor.rowcount == 1
 
     def message(self):
         return f'Dataset {self.dataset_id} does not exist'
+
+
+@dc.dataclass
+class PartitionPathExists(Assertion):
+    hub_id:     uuid.UUID
+    dataset_id: uuid.UUID
+    version:    int
+    path:       str
+    values:     t.List[str]
+
+    status_code = 404
+
+    def _check(self, cursor):
+        cursor.execute('''
+            SELECT 1
+            FROM partitions
+            WHERE
+                hub_id = %s
+            AND dataset_id = %s
+            AND version = %s
+            AND path = %s
+            AND partition_values = %s
+        ''', (self.hub_id, self.dataset_id, self.version, self.path, self.values))
+        return cursor.rowcount == 1
+
+    def message(self):
+        return (
+            f'Partition path {self.path} {self.values} does not exist in '
+            f'{self.hub_id}::{self.dataset_id}::{self.version}'
+        )
 
 
 @dc.dataclass

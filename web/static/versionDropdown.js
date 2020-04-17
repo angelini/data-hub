@@ -18,7 +18,6 @@ function resetSelects(fieldset, published) {
 
     let datasetKey = datasets.value + ':' + datasets.options[datasets.selectedIndex].innerText;
 
-    debugger
     if (versions.dataset.parent != datasets.value) {
         versions.innerHTML = '';
 

@@ -1,6 +1,6 @@
 import flask
 
-from core.engine import NewUser
+from core.engine.actions import NewUser
 from web.db import execute_action
 
 bp = flask.Blueprint('users', __name__, url_prefix='/users')

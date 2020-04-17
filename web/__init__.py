@@ -1,5 +1,5 @@
 import datetime as dt
-import logging
+import logging as std_logging
 import time
 import sys
 import uuid
@@ -11,6 +11,7 @@ import psycopg2 as psql
 import psycopg2.pool
 import structlog
 
+from core.engine import logging
 from web.db import AssertionFailure, DbException
 
 
@@ -28,24 +29,9 @@ def format_tooltip(partition):
 
 
 def create_app():
-    logging.basicConfig(format='%(message)s', stream=sys.stdout, level=logging.INFO)
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
-
-    structlog.configure(
-        processors=[
-            structlog.stdlib.filter_by_level,
-            structlog.processors.StackInfoRenderer(),
-            structlog.dev.set_exc_info,
-            structlog.processors.format_exc_info,
-            structlog.processors.TimeStamper(fmt='%d-%m-%Y %H:%M:%S'),
-            structlog.dev.ConsoleRenderer(),
-        ],
-        context_class=structlog.threadlocal.wrap_dict(dict),
-        logger_factory=structlog.stdlib.LoggerFactory(),
-    )
-
-    logger = structlog.get_logger()
+    logging.configure()
+    werkzeug_log = std_logging.getLogger('werkzeug')
+    werkzeug_log.setLevel(std_logging.ERROR)
 
     app = flask.Flask(__name__, instance_relative_config=True)
 
@@ -91,8 +77,12 @@ def create_app():
     @app.before_request
     def before_request_logger():
         flask.g.start_time = time.time()
-        log = logger.new(request_id=str(uuid.uuid4()))
-        log.info('request_start', method=flask.request.method, url=flask.request.url)
+        logging.init(request_id=uuid.uuid4())
+        logging.info('start_request',
+                     method=flask.request.method,
+                     host=flask.request.host_url,
+                     path=flask.request.path,
+                     endpoint=getattr(flask.request.url_rule, 'endpoint', ''))
 
     exclude_authorization = [
         'auth.login_html', 'auth.login_json', 'redirect_index', 'static', 'users.new_json',
@@ -100,8 +90,8 @@ def create_app():
 
     @app.before_request
     def before_request_authorization():
-        rule = flask.request.url_rule
-        if flask.request.path == '/favicon.ico' or (rule and rule.endpoint in exclude_authorization):
+        endpoint = getattr(flask.request.url_rule, 'endpoint', '')
+        if flask.request.path == '/favicon.ico' or endpoint in exclude_authorization:
             return
 
         try:
@@ -114,7 +104,13 @@ def create_app():
     @app.after_request
     def after_request_logger(response):
         log = structlog.get_logger()
-        log.info('request_stop', code=response.status_code, time=(time.time() - flask.g.start_time))
+        log.info('stop_request',
+                 code=response.status_code,
+                 time=round((time.time() - flask.g.start_time) * 1000, ndigits=4),
+                 method=flask.request.method,
+                 host=flask.request.host_url,
+                 path=flask.request.path,
+                 endpoint=getattr(flask.request.url_rule, 'endpoint', ''))
         return response
 
     @app.teardown_appcontext

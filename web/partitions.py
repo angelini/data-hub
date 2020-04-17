@@ -2,7 +2,8 @@ import datetime as dt
 
 import flask
 
-from core.engine import NewPartition, VersionExists
+from core.engine.actions import NewPartition
+from core.engine.assertions import VersionExists
 from web.auth import auth_current_hub_reader, require_writer
 from web.db import check_assertion, execute_action
 
@@ -55,8 +56,8 @@ def new_html(hub_id, dataset_id, version):
     execute_action(NewPartition(hub_id,
                                 dataset_id,
                                 version,
-                                data.getlist('partition_values[]'),
                                 data['path'],
+                                data.getlist('partition_values[]'),
                                 data.get('row_count'),
                                 start_time,
                                 end_time))

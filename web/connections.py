@@ -1,6 +1,8 @@
 import flask
 
-from core.engine import DatasetExists, RenderConnection, NewConnection
+from core.engine.actions import NewConnection
+from core.engine.assertions import DatasetExists
+from core.engine.views import RenderConnection
 from web.auth import auth_current_hub_reader, require_writer
 from web.db import check_assertion, execute_action, fetch_view
 
@@ -15,7 +17,7 @@ def authorize_before_request():
 @bp.route('/new.json', methods=['POST'])
 @require_writer
 def new_json(hub_id, dataset_id):
-    check_assertion(DatasetExists(dataset_id))
+    check_assertion(DatasetExists(hub_id, dataset_id))
     data = flask.request.json
     connection_id = execute_action(
         NewConnection(hub_id,
@@ -29,7 +31,7 @@ def new_json(hub_id, dataset_id):
 @bp.route('/new.html', methods=['POST'])
 @require_writer
 def new_html(hub_id, dataset_id):
-    check_assertion(DatasetExists(dataset_id))
+    check_assertion(DatasetExists(hub_id, dataset_id))
     data = flask.request.form
 
     execute_action(NewConnection(hub_id,
