@@ -1,0 +1,39 @@
+[
+    {
+        "namespace": "data_hub.example",
+        "type": "enum",
+        "name": "Vendor",
+        "symbols" : ["APPLE", "GOOGLE"]
+    },
+    {
+        "namespace": "data_hub.example",
+        "type": "record",
+        "name": "Device",
+        "fields": [
+            {"name": "vendor", "type": "data_hub.example.Vendor"},
+            {"name": "model", "type": "string"}
+        ]
+    },
+    {
+        "namespace": "data_hub.example",
+        "type": "record",
+        "name": "Cookie",
+        "fields": [
+            {"name": "name", "type": "string"},
+            {"name": "value",  "type": "string"},
+            {"name": "expires", "type": ["null", "string"]}
+        ]
+    },
+    {
+        "namespace": "data_hub.example",
+        "type": "record",
+        "name": "Visit",
+        "fields": [
+            {"name": "ip", "type": "string"},
+            {"name": "path",  "type": "string"},
+            {"name": "device", "type": "data_hub.example.Device"},
+            {"name": "cookies", "type": {"type": "array", "items": "data_hub.example.Cookie"}},
+            {"name": "time", "type": {"type": "int", "logicalType": "timestamp-millis"}}
+        ]
+    }
+]

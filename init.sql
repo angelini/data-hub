@@ -1,9 +1,3 @@
-/*
-
-https://app.sqldbm.com/PostgreSQL/Edit/p101568/
-
-*/
-
 DROP TABLE IF EXISTS users              CASCADE;
 DROP TABLE IF EXISTS teams              CASCADE;
 DROP TABLE IF EXISTS team_members       CASCADE;
@@ -11,10 +5,12 @@ DROP TABLE IF EXISTS hubs               CASCADE;
 DROP TABLE IF EXISTS team_roles         CASCADE;
 DROP TABLE IF EXISTS datasets           CASCADE;
 DROP TABLE IF EXISTS backends           CASCADE;
+DROP TABLE IF EXISTS schemas            CASCADE;
+DROP TABLE IF EXISTS schema_keys        CASCADE;
 DROP TABLE IF EXISTS dataset_versions   CASCADE;
+DROP TABLE IF EXISTS dependencies       CASCADE;
 DROP TABLE IF EXISTS columns            CASCADE;
 DROP TABLE IF EXISTS types              CASCADE;
-DROP TABLE IF EXISTS dependencies       CASCADE;
 DROP TABLE IF EXISTS published_versions CASCADE;
 DROP TABLE IF EXISTS partitions         CASCADE;
 DROP TABLE IF EXISTS partition_statuses CASCADE;
@@ -118,12 +114,50 @@ CREATE TABLE IF NOT EXISTS backends (
     CONSTRAINT valid_python_module CHECK (module ~ '^[A-Za-z_][A-Za-z0-9_.]*')
 );
 
+CREATE TABLE IF NOT EXISTS schemas (
+    id uuid,
+
+    avro jsonb,
+
+    PRIMARY KEY (id)
+);
+
+
+    null: no value
+    boolean: a binary value
+    int: 32-bit signed integer
+    long: 64-bit signed integer
+    float: single precision (32-bit) IEEE 754 floating-point number
+    double: double precision (64-bit) IEEE 754 floating-point number
+    bytes: sequence of 8-bit unsigned bytes
+    string: unicode character sequence
+
+
+CREATE TYPE field_type AS ENUM ('null', 'boolean', 'int', 'long', 'float', 'double', 'bytes', 'string', );
+
+CREATE TABLE IF NOT EXISTS schema_keys (
+    schema_id uuid,
+    key       text,
+
+    position    int     NOT NULL,
+    description text    NOT NULL,
+    is_nullable boolean NOT NULL,
+    is_unique   boolean NOT NULL,
+    has_pii     boolean NOT NULL,
+
+    PRIMARY KEY (schema_id, key),
+    FOREIGN KEY (schema_id) REFERENCES schemas(id),
+    CONSTRAINT name_length CHECK (char_length(name) >= 1 AND char_length(name) < 1028),
+    CONSTRAINT positive_position CHECK (position >= 0)
+);
+
 CREATE TABLE IF NOT EXISTS dataset_versions (
     hub_id      uuid,
     dataset_id  uuid,
     version     int,
 
     backend_id     int         NOT NULL,
+    schema_id      uuid        NOT NULL,
     partition_keys text[]      NOT NULL,
     path           text        NOT NULL,
     description    text        NOT NULL,
@@ -133,6 +167,7 @@ CREATE TABLE IF NOT EXISTS dataset_versions (
     PRIMARY KEY (hub_id, dataset_id, version),
     FOREIGN KEY (hub_id, dataset_id) REFERENCES datasets(hub_id, id),
     FOREIGN KEY (backend_id) REFERENCES backends(id),
+    FOREIGN KEY (schema_id) REFERENCES schemas(id),
     CONSTRAINT positive_version CHECK (version >= 0)
 );
 
